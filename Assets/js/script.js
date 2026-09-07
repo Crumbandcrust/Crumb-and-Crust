@@ -12,7 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+
+    window.addEventListener("scroll", onScroll, {
+      passive: true
+    });
   }
 
   /* ---------- Desktop menu dropdown ---------- */
@@ -27,83 +30,135 @@ document.addEventListener("DOMContentLoaded", () => {
       event.stopPropagation();
 
       const isOpen = menu.classList.toggle("open");
-      button.setAttribute("aria-expanded", String(isOpen));
+
+      button.setAttribute(
+        "aria-expanded",
+        String(isOpen)
+      );
     });
   });
 
   document.addEventListener("click", () => {
-    document.querySelectorAll(".dropdown-menu.open").forEach(menu => {
-      menu.classList.remove("open");
-    });
+    document
+      .querySelectorAll(".dropdown-menu.open")
+      .forEach(menu => {
+        menu.classList.remove("open");
+      });
 
-    document.querySelectorAll("[data-dropdown-toggle]").forEach(button => {
-      button.setAttribute("aria-expanded", "false");
-    });
+    document
+      .querySelectorAll("[data-dropdown-toggle]")
+      .forEach(button => {
+        button.setAttribute(
+          "aria-expanded",
+          "false"
+        );
+      });
   });
 
   /* ---------- Mobile hamburger navigation ---------- */
-  const hamburger = document.querySelector(".hamburger");
-  const mobileNav = document.querySelector(".mobile-nav");
+  const hamburger =
+    document.querySelector(".hamburger");
+
+  const mobileNav =
+    document.querySelector(".mobile-nav");
 
   if (hamburger && mobileNav) {
     hamburger.addEventListener("click", () => {
-      const isOpen = mobileNav.classList.toggle("open");
+      const isOpen =
+        mobileNav.classList.toggle("open");
 
-      hamburger.classList.toggle("is-active", isOpen);
-      hamburger.setAttribute("aria-expanded", String(isOpen));
-      document.body.style.overflow = isOpen ? "hidden" : "";
+      hamburger.classList.toggle(
+        "is-active",
+        isOpen
+      );
+
+      hamburger.setAttribute(
+        "aria-expanded",
+        String(isOpen)
+      );
+
+      document.body.style.overflow =
+        isOpen ? "hidden" : "";
     });
 
-    mobileNav.querySelectorAll("a").forEach(link => {
-      link.addEventListener("click", () => {
-        mobileNav.classList.remove("open");
-        hamburger.classList.remove("is-active");
-        hamburger.setAttribute("aria-expanded", "false");
-        document.body.style.overflow = "";
+    mobileNav
+      .querySelectorAll("a")
+      .forEach(link => {
+        link.addEventListener("click", () => {
+          mobileNav.classList.remove("open");
+
+          hamburger.classList.remove(
+            "is-active"
+          );
+
+          hamburger.setAttribute(
+            "aria-expanded",
+            "false"
+          );
+
+          document.body.style.overflow = "";
+        });
       });
-    });
   }
 
   /* ---------- Mobile menu accordion ---------- */
-  document.querySelectorAll("[data-mobile-toggle]").forEach(button => {
-    const submenu = button.nextElementSibling;
+  document
+    .querySelectorAll("[data-mobile-toggle]")
+    .forEach(button => {
+      const submenu =
+        button.nextElementSibling;
 
-    if (!submenu) {
-      return;
-    }
+      if (!submenu) {
+        return;
+      }
 
-    button.addEventListener("click", () => {
-      submenu.classList.toggle("open");
+      button.addEventListener("click", () => {
+        submenu.classList.toggle("open");
+      });
     });
-  });
 
   /* ---------- Scroll reveal ---------- */
-  const revealElements = document.querySelectorAll(".reveal");
+  const revealElements =
+    document.querySelectorAll(".reveal");
 
-  if ("IntersectionObserver" in window && revealElements.length) {
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12 }
-    );
+  if (
+    "IntersectionObserver" in window &&
+    revealElements.length
+  ) {
+    const observer =
+      new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add(
+                "is-visible"
+              );
+
+              observer.unobserve(
+                entry.target
+              );
+            }
+          });
+        },
+        {
+          threshold: 0.12
+        }
+      );
 
     revealElements.forEach(element => {
       observer.observe(element);
     });
   } else {
     revealElements.forEach(element => {
-      element.classList.add("is-visible");
+      element.classList.add(
+        "is-visible"
+      );
     });
   }
 
   /* ---------- Order page ---------- */
-  const orderForm = document.getElementById("orderForm");
+  const orderForm =
+    document.getElementById("orderForm");
 
   if (orderForm) {
     initializeOrderForm(orderForm);
@@ -122,19 +177,28 @@ const ORDER_SETTINGS = {
 const MAX_ITEMS_PER_ORDER = 4;
 const DELIVERY_FEE = 4;
 
-const FORM_ENDPOINT = "https://formspree.io/f/meebdven";
-
 /* ==========================================================================
    Firebase configuration
    ========================================================================== */
 
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDrqltlq7LiRPH84y1-2lH0ISPsEhEQjak",
-  authDomain: "crumb-and-crust.firebaseapp.com",
-  projectId: "crumb-and-crust",
-  storageBucket: "crumb-and-crust.firebasestorage.app",
-  messagingSenderId: "514675143126",
-  appId: "1:514675143126:web:3f47f98c476b4b0f96f477"
+  apiKey:
+    "AIzaSyDrqltlq7LiRPH84y1-2lH0ISPsEhEQjak",
+
+  authDomain:
+    "crumb-and-crust.firebaseapp.com",
+
+  projectId:
+    "crumb-and-crust",
+
+  storageBucket:
+    "crumb-and-crust.firebasestorage.app",
+
+  messagingSenderId:
+    "514675143126",
+
+  appId:
+    "1:514675143126:web:3f47f98c476b4b0f96f477"
 };
 
 /* ==========================================================================
@@ -143,11 +207,47 @@ const FIREBASE_CONFIG = {
 
 function initializeOrderForm(form) {
   renderStatusBanner();
+
   listenForVacationMode();
+
   populatePickupDates();
+
   wireDeliveryToggle();
+
   wireQuantitySteppers();
+
   wireSubmit(form);
+}
+
+/* ==========================================================================
+   Firebase helpers
+   ========================================================================== */
+
+async function getStorefrontDatabase() {
+  const {
+    initializeApp,
+    getApps,
+    getApp
+  } = await import(
+    "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"
+  );
+
+  const {
+    getFirestore
+  } = await import(
+    "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
+  );
+
+  const firebaseApp =
+    getApps().length
+      ? getApp()
+      : initializeApp(
+          FIREBASE_CONFIG
+        );
+
+  return getFirestore(
+    firebaseApp
+  );
 }
 
 /* ==========================================================================
@@ -156,69 +256,121 @@ function initializeOrderForm(form) {
 
 async function listenForVacationMode() {
   try {
-    const { initializeApp, getApps, getApp } = await import(
+    const {
+      initializeApp,
+      getApps,
+      getApp
+    } = await import(
       "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"
     );
 
-    const { getFirestore, doc, onSnapshot } = await import(
+    const {
+      getFirestore,
+      doc,
+      onSnapshot
+    } = await import(
       "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
     );
 
-    const firebaseApp = getApps().length
-      ? getApp()
-      : initializeApp(FIREBASE_CONFIG);
+    const firebaseApp =
+      getApps().length
+        ? getApp()
+        : initializeApp(
+            FIREBASE_CONFIG
+          );
 
-    const database = getFirestore(firebaseApp);
-    const settingsDocument = doc(database, "settings", "store");
+    const database =
+      getFirestore(firebaseApp);
+
+    const settingsDocument =
+      doc(
+        database,
+        "settings",
+        "store"
+      );
 
     onSnapshot(
       settingsDocument,
+
       snapshot => {
         if (!snapshot.exists()) {
           renderStatusBanner();
           return;
         }
 
-        const data = snapshot.data();
-        renderStatusBanner(data.vacation || null);
+        const data =
+          snapshot.data();
+
+        renderStatusBanner(
+          data.vacation || null
+        );
       },
+
       error => {
-        console.error("Could not load Vacation Mode:", error);
+        console.error(
+          "Could not load Vacation Mode:",
+          error
+        );
+
         renderStatusBanner();
       }
     );
   } catch (error) {
-    console.error("Could not connect the storefront to Firebase:", error);
+    console.error(
+      "Could not connect the storefront to Firebase:",
+      error
+    );
+
     renderStatusBanner();
   }
 }
 
-function renderStatusBanner(vacationSettings = null) {
-  const banner = document.getElementById("orderStatus");
-  const formWrapper = document.getElementById("orderFormWrap");
+function renderStatusBanner(
+  vacationSettings = null
+) {
+  const banner =
+    document.getElementById(
+      "orderStatus"
+    );
+
+  const formWrapper =
+    document.getElementById(
+      "orderFormWrap"
+    );
 
   if (!banner) {
     return;
   }
 
-  const vacationEnabled = vacationSettings?.enabled === true;
-  const manuallyClosed = ORDER_SETTINGS.acceptingOrders === false;
-  const orderingClosed = vacationEnabled || manuallyClosed;
+  const vacationEnabled =
+    vacationSettings?.enabled === true;
+
+  const manuallyClosed =
+    ORDER_SETTINGS.acceptingOrders === false;
+
+  const orderingClosed =
+    vacationEnabled ||
+    manuallyClosed;
 
   if (orderingClosed) {
-    banner.className = "status-banner closed";
+    banner.className =
+      "status-banner closed";
 
     if (vacationEnabled) {
       banner.textContent =
         vacationSettings.message ||
         "We are temporarily closed for orders.";
 
-      if (vacationSettings.reopenDate) {
-        const formattedDate = formatReopeningDate(
-          vacationSettings.reopenDate
-        );
+      if (
+        vacationSettings.reopenDate
+      ) {
+        const formattedDate =
+          formatReopeningDate(
+            vacationSettings.reopenDate
+          );
 
-        banner.textContent += ` We plan to reopen ${formattedDate}.`;
+        banner.textContent +=
+          ` We plan to reopen ${formattedDate}.`;
       }
     } else {
       banner.innerHTML =
@@ -229,41 +381,58 @@ function renderStatusBanner(vacationSettings = null) {
     }
 
     if (formWrapper) {
-      formWrapper.style.display = "none";
+      formWrapper.style.display =
+        "none";
     }
 
     return;
   }
 
   if (formWrapper) {
-    formWrapper.style.display = "";
+    formWrapper.style.display =
+      "";
   }
 
   let message =
     "Now accepting orders for pickup and delivery this weekend.";
 
-  if (ORDER_SETTINGS.limitedCapacityNote) {
+  if (
+    ORDER_SETTINGS.limitedCapacityNote
+  ) {
     message +=
       " We bake in small batches, so get your order in early in the week.";
   }
 
-  banner.className = "status-banner open";
-  banner.textContent = message;
+  banner.className =
+    "status-banner open";
+
+  banner.textContent =
+    message;
 }
 
 function formatReopeningDate(value) {
-  const date = new Date(`${value}T00:00:00`);
+  const date =
+    new Date(
+      `${value}T00:00:00`
+    );
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
     return value;
   }
 
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  });
+  return date.toLocaleDateString(
+    "en-US",
+    {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric"
+    }
+  );
 }
 
 /* ==========================================================================
@@ -271,24 +440,44 @@ function formatReopeningDate(value) {
    ========================================================================== */
 
 function populatePickupDates() {
-  const select = document.getElementById("pickupDate");
+  const select =
+    document.getElementById(
+      "pickupDate"
+    );
 
   if (!select) {
     return;
   }
 
   const availableDates = [];
-  const cursor = new Date();
 
-  cursor.setHours(0, 0, 0, 0);
+  const cursor =
+    new Date();
 
-  while (availableDates.length < 6) {
-    cursor.setDate(cursor.getDate() + 1);
+  cursor.setHours(
+    0,
+    0,
+    0,
+    0
+  );
 
-    const dayOfWeek = cursor.getDay();
+  while (
+    availableDates.length < 6
+  ) {
+    cursor.setDate(
+      cursor.getDate() + 1
+    );
 
-    if (dayOfWeek === 6 || dayOfWeek === 0) {
-      availableDates.push(new Date(cursor));
+    const dayOfWeek =
+      cursor.getDay();
+
+    if (
+      dayOfWeek === 6 ||
+      dayOfWeek === 0
+    ) {
+      availableDates.push(
+        new Date(cursor)
+      );
     }
   }
 
@@ -298,16 +487,29 @@ function populatePickupDates() {
     "</option>";
 
   availableDates.forEach(date => {
-    const option = document.createElement("option");
+    const option =
+      document.createElement(
+        "option"
+      );
 
-    option.value = date.toISOString().slice(0, 10);
-    option.textContent = date.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric"
-    });
+    option.value =
+      date
+        .toISOString()
+        .slice(0, 10);
 
-    select.appendChild(option);
+    option.textContent =
+      date.toLocaleDateString(
+        "en-US",
+        {
+          weekday: "long",
+          month: "long",
+          day: "numeric"
+        }
+      );
+
+    select.appendChild(
+      option
+    );
   });
 }
 
@@ -316,39 +518,53 @@ function populatePickupDates() {
    ========================================================================== */
 
 function updateDeliveryFieldsVisibility() {
-  const deliveryFields = document.getElementById("deliveryFields");
+  const deliveryFields =
+    document.getElementById(
+      "deliveryFields"
+    );
 
   if (!deliveryFields) {
     return;
   }
 
-  const selectedFulfillment = document.querySelector(
-    'input[name="Fulfillment"]:checked'
-  );
+  const selectedFulfillment =
+    document.querySelector(
+      'input[name="Fulfillment"]:checked'
+    );
 
   const deliverySelected =
-    selectedFulfillment?.value === "Delivery";
+    selectedFulfillment?.value ===
+    "Delivery";
 
-  deliveryFields.classList.toggle("show", deliverySelected);
+  deliveryFields.classList.toggle(
+    "show",
+    deliverySelected
+  );
 
-  deliveryFields.querySelectorAll("input").forEach(input => {
-    input.required = deliverySelected;
-  });
+  deliveryFields
+    .querySelectorAll("input")
+    .forEach(input => {
+      input.required =
+        deliverySelected;
+    });
 
   updateOrderTotal();
 }
 
 function wireDeliveryToggle() {
-  const fulfillmentOptions = document.querySelectorAll(
-    'input[name="Fulfillment"]'
-  );
-
-  fulfillmentOptions.forEach(option => {
-    option.addEventListener(
-      "change",
-      updateDeliveryFieldsVisibility
+  const fulfillmentOptions =
+    document.querySelectorAll(
+      'input[name="Fulfillment"]'
     );
-  });
+
+  fulfillmentOptions.forEach(
+    option => {
+      option.addEventListener(
+        "change",
+        updateDeliveryFieldsVisibility
+      );
+    }
+  );
 
   updateDeliveryFieldsVisibility();
 }
@@ -358,58 +574,123 @@ function wireDeliveryToggle() {
    ========================================================================== */
 
 function wireQuantitySteppers() {
-  document.querySelectorAll(".qty-stepper").forEach(stepper => {
-    const input = stepper.querySelector(".qty-input");
-    const decreaseButton = stepper.querySelector(".qty-minus");
-    const increaseButton = stepper.querySelector(".qty-plus");
+  document
+    .querySelectorAll(
+      ".qty-stepper"
+    )
+    .forEach(stepper => {
+      const input =
+        stepper.querySelector(
+          ".qty-input"
+        );
 
-    if (!input || !decreaseButton || !increaseButton) {
-      return;
-    }
+      const decreaseButton =
+        stepper.querySelector(
+          ".qty-minus"
+        );
 
-    decreaseButton.addEventListener("click", () => {
-      const currentQuantity =
-        Number.parseInt(input.value || "0", 10) || 0;
+      const increaseButton =
+        stepper.querySelector(
+          ".qty-plus"
+        );
 
-      input.value = String(Math.max(0, currentQuantity - 1));
-      refreshItemLimits();
-    });
-
-    increaseButton.addEventListener("click", () => {
-      if (getCurrentItemTotal() >= MAX_ITEMS_PER_ORDER) {
+      if (
+        !input ||
+        !decreaseButton ||
+        !increaseButton
+      ) {
         return;
       }
 
-      const currentQuantity =
-        Number.parseInt(input.value || "0", 10) || 0;
+      decreaseButton.addEventListener(
+        "click",
+        () => {
+          const currentQuantity =
+            Number.parseInt(
+              input.value || "0",
+              10
+            ) || 0;
 
-      const itemMaximum =
-        Number.parseInt(input.max || "4", 10) ||
-        MAX_ITEMS_PER_ORDER;
+          input.value =
+            String(
+              Math.max(
+                0,
+                currentQuantity - 1
+              )
+            );
 
-      input.value = String(
-        Math.min(itemMaximum, currentQuantity + 1)
+          refreshItemLimits();
+        }
       );
 
-      refreshItemLimits();
+      increaseButton.addEventListener(
+        "click",
+        () => {
+          if (
+            getCurrentItemTotal() >=
+            MAX_ITEMS_PER_ORDER
+          ) {
+            return;
+          }
+
+          const currentQuantity =
+            Number.parseInt(
+              input.value || "0",
+              10
+            ) || 0;
+
+          const itemMaximum =
+            Number.parseInt(
+              input.max || "4",
+              10
+            ) ||
+            MAX_ITEMS_PER_ORDER;
+
+          input.value =
+            String(
+              Math.min(
+                itemMaximum,
+                currentQuantity + 1
+              )
+            );
+
+          refreshItemLimits();
+        }
+      );
     });
-  });
 
   refreshItemLimits();
 }
 
 function getCurrentItemTotal() {
-  return Array.from(document.querySelectorAll(".qty-input")).reduce(
+  return Array.from(
+    document.querySelectorAll(
+      ".qty-input"
+    )
+  ).reduce(
     (total, input) => {
-      return total + (Number.parseInt(input.value, 10) || 0);
+      return (
+        total +
+        (
+          Number.parseInt(
+            input.value,
+            10
+          ) || 0
+        )
+      );
     },
     0
   );
 }
 
 function refreshItemLimits() {
-  const totalItems = getCurrentItemTotal();
-  const counter = document.getElementById("itemCounter");
+  const totalItems =
+    getCurrentItemTotal();
+
+  const counter =
+    document.getElementById(
+      "itemCounter"
+    );
 
   if (counter) {
     counter.textContent =
@@ -417,32 +698,60 @@ function refreshItemLimits() {
 
     counter.classList.toggle(
       "at-max",
-      totalItems >= MAX_ITEMS_PER_ORDER
+      totalItems >=
+        MAX_ITEMS_PER_ORDER
     );
   }
 
-  document.querySelectorAll(".qty-stepper").forEach(stepper => {
-    const input = stepper.querySelector(".qty-input");
-    const increaseButton = stepper.querySelector(".qty-plus");
-    const decreaseButton = stepper.querySelector(".qty-minus");
+  document
+    .querySelectorAll(
+      ".qty-stepper"
+    )
+    .forEach(stepper => {
+      const input =
+        stepper.querySelector(
+          ".qty-input"
+        );
 
-    if (!input || !increaseButton || !decreaseButton) {
-      return;
-    }
+      const increaseButton =
+        stepper.querySelector(
+          ".qty-plus"
+        );
 
-    const quantity =
-      Number.parseInt(input.value, 10) || 0;
+      const decreaseButton =
+        stepper.querySelector(
+          ".qty-minus"
+        );
 
-    const itemMaximum =
-      Number.parseInt(input.max, 10) ||
-      MAX_ITEMS_PER_ORDER;
+      if (
+        !input ||
+        !increaseButton ||
+        !decreaseButton
+      ) {
+        return;
+      }
 
-    increaseButton.disabled =
-      quantity >= itemMaximum ||
-      totalItems >= MAX_ITEMS_PER_ORDER;
+      const quantity =
+        Number.parseInt(
+          input.value,
+          10
+        ) || 0;
 
-    decreaseButton.disabled = quantity <= 0;
-  });
+      const itemMaximum =
+        Number.parseInt(
+          input.max,
+          10
+        ) ||
+        MAX_ITEMS_PER_ORDER;
+
+      increaseButton.disabled =
+        quantity >= itemMaximum ||
+        totalItems >=
+          MAX_ITEMS_PER_ORDER;
+
+      decreaseButton.disabled =
+        quantity <= 0;
+    });
 
   updateOrderTotal();
 }
@@ -452,7 +761,10 @@ function refreshItemLimits() {
    ========================================================================== */
 
 function updateOrderTotal() {
-  const totalElement = document.getElementById("orderTotal");
+  const totalElement =
+    document.getElementById(
+      "orderTotal"
+    );
 
   if (!totalElement) {
     return;
@@ -460,139 +772,421 @@ function updateOrderTotal() {
 
   let orderTotal = 0;
 
-  document.querySelectorAll(".qty-input").forEach(input => {
-    const price =
-      Number.parseFloat(input.dataset.price || "0") || 0;
+  document
+    .querySelectorAll(
+      ".qty-input"
+    )
+    .forEach(input => {
+      const price =
+        Number.parseFloat(
+          input.dataset.price ||
+          "0"
+        ) || 0;
 
-    const quantity =
-      Number.parseInt(input.value, 10) || 0;
+      const quantity =
+        Number.parseInt(
+          input.value,
+          10
+        ) || 0;
 
-    orderTotal += price * quantity;
-  });
+      orderTotal +=
+        price * quantity;
+    });
 
-  const selectedFulfillment = document.querySelector(
-    'input[name="Fulfillment"]:checked'
-  );
+  const selectedFulfillment =
+    document.querySelector(
+      'input[name="Fulfillment"]:checked'
+    );
 
   const deliverySelected =
-    selectedFulfillment?.value === "Delivery";
+    selectedFulfillment?.value ===
+    "Delivery";
 
   if (deliverySelected) {
-    orderTotal += DELIVERY_FEE;
+    orderTotal +=
+      DELIVERY_FEE;
   }
 
-  totalElement.textContent = deliverySelected
-    ? `Estimated total: $${orderTotal.toFixed(2)} ` +
-      `(includes $${DELIVERY_FEE.toFixed(2)} delivery)`
-    : `Estimated total: $${orderTotal.toFixed(2)}`;
+  totalElement.textContent =
+    deliverySelected
+      ? `Estimated total: $${orderTotal.toFixed(
+          2
+        )} (includes $${DELIVERY_FEE.toFixed(
+          2
+        )} delivery)`
+      : `Estimated total: $${orderTotal.toFixed(
+          2
+        )}`;
 }
 
 /* ==========================================================================
-   Form submission
+   Firestore order submission
    ========================================================================== */
 
 function wireSubmit(form) {
-  const messageElement = document.getElementById("formMessage");
-  const submitButton = document.getElementById("submitOrder");
-
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    showFormMessage("", "");
-
-    const quantityInputs = Array.from(
-      document.querySelectorAll(".qty-input")
+  const messageElement =
+    document.getElementById(
+      "formMessage"
     );
 
-    const totalItems = quantityInputs.reduce((total, input) => {
-      return total + (Number.parseInt(input.value, 10) || 0);
-    }, 0);
+  const submitButton =
+    document.getElementById(
+      "submitOrder"
+    );
 
-    if (totalItems === 0) {
+  form.addEventListener(
+    "submit",
+    async event => {
+      event.preventDefault();
+
       showFormMessage(
-        "Add at least one item to your order before sending it in.",
-        "warning"
+        "",
+        ""
       );
 
-      return;
-    }
-
-    if (totalItems > MAX_ITEMS_PER_ORDER) {
-      showFormMessage(
-        `Orders are limited to ${MAX_ITEMS_PER_ORDER} ` +
-          "loaves or focaccias at a time. Please adjust your quantities.",
-        "warning"
-      );
-
-      return;
-    }
-
-    if (!form.checkValidity()) {
-      form.reportValidity();
-      return;
-    }
-
-    if (!FORM_ENDPOINT.startsWith("https://formspree.io/f/")) {
-      showFormMessage(
-        "The order form is not connected yet. Please email " +
-          "crumbandcrustca@gmail.com directly.",
-        "warning"
-      );
-
-      return;
-    }
-
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Sending order…";
-    }
-
-    try {
-      const response = await fetch(FORM_ENDPOINT, {
-        method: "POST",
-        body: new FormData(form),
-        headers: {
-          Accept: "application/json"
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Formspree returned status ${response.status}.`
+      const quantityInputs =
+        Array.from(
+          document.querySelectorAll(
+            ".qty-input"
+          )
         );
+
+      const items =
+        quantityInputs
+          .map(input => {
+            const quantity =
+              Number.parseInt(
+                input.value,
+                10
+              ) || 0;
+
+            const price =
+              Number.parseFloat(
+                input.dataset.price ||
+                "0"
+              ) || 0;
+
+            return {
+              name:
+                input.name ||
+                input.dataset.name ||
+                "Item",
+
+              quantity,
+
+              price,
+
+              subtotal:
+                price * quantity
+            };
+          })
+          .filter(item => {
+            return (
+              item.quantity > 0
+            );
+          });
+
+      const totalItems =
+        items.reduce(
+          (total, item) => {
+            return (
+              total +
+              item.quantity
+            );
+          },
+          0
+        );
+
+      if (
+        totalItems === 0
+      ) {
+        showFormMessage(
+          "Add at least one item to your order before sending it in.",
+          "warning"
+        );
+
+        return;
       }
 
-      showFormMessage(
-        "Thanks! Your order is in. We’ll follow up by phone " +
-          "or email to confirm.",
-        "success"
-      );
+      if (
+        totalItems >
+        MAX_ITEMS_PER_ORDER
+      ) {
+        showFormMessage(
+          `Orders are limited to ${MAX_ITEMS_PER_ORDER} items at a time. Please adjust your quantities.`,
+          "warning"
+        );
 
-      form.reset();
-      updateDeliveryFieldsVisibility();
-      refreshItemLimits();
-    } catch (error) {
-      console.error("Could not submit order:", error);
+        return;
+      }
 
-      showFormMessage(
-        "Something went wrong sending that. Please try again, " +
-          "or email crumbandcrustca@gmail.com directly.",
-        "error"
-      );
-    } finally {
+      if (
+        !form.checkValidity()
+      ) {
+        form.reportValidity();
+        return;
+      }
+
+      const formData =
+        new FormData(form);
+
+      const fulfillment =
+        String(
+          formData.get(
+            "Fulfillment"
+          ) ||
+          "Pickup"
+        );
+
+      let total =
+        items.reduce(
+          (sum, item) => {
+            return (
+              sum +
+              item.subtotal
+            );
+          },
+          0
+        );
+
+      if (
+        fulfillment ===
+        "Delivery"
+      ) {
+        total +=
+          DELIVERY_FEE;
+      }
+
+      const itemsSummary =
+        items
+          .map(item => {
+            return `${item.quantity}× ${item.name}`;
+          })
+          .join(", ");
+
+      const orderNumber =
+        `CC-${Date.now()
+          .toString()
+          .slice(-8)}`;
+
+      const customerName =
+        getFormValue(
+          formData,
+          [
+            "Name",
+            "name",
+            "Customer Name",
+            "customer"
+          ]
+        );
+
+      const email =
+        getFormValue(
+          formData,
+          [
+            "Email",
+            "email"
+          ]
+        );
+
+      const phone =
+        getFormValue(
+          formData,
+          [
+            "Phone",
+            "phone"
+          ]
+        );
+
+      const preferredDate =
+        getFormValue(
+          formData,
+          [
+            "Preferred Date",
+            "Pickup Date",
+            "pickupDate",
+            "Date"
+          ]
+        );
+
+      const deliveryAddress =
+        fulfillment ===
+        "Delivery"
+          ? getFormValue(
+              formData,
+              [
+                "Delivery Address",
+                "Address",
+                "address"
+              ]
+            )
+          : "";
+
+      const notes =
+        getFormValue(
+          formData,
+          [
+            "Notes",
+            "notes",
+            "Special Instructions"
+          ]
+        );
+
       if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = "Send order";
+        submitButton.disabled =
+          true;
+
+        submitButton.textContent =
+          "Sending order…";
+      }
+
+      try {
+        const database =
+          await getStorefrontDatabase();
+
+        const {
+          addDoc,
+          collection,
+          serverTimestamp
+        } = await import(
+          "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
+        );
+
+        await addDoc(
+          collection(
+            database,
+            "orders"
+          ),
+          {
+            orderNumber,
+
+            customer:
+              customerName,
+
+            customerName,
+
+            phone,
+
+            email,
+
+            fulfillment,
+
+            deliveryAddress,
+
+            preferredDate,
+
+            notes,
+
+            items,
+
+            itemsSummary,
+
+            item:
+              itemsSummary,
+
+            itemCount:
+              totalItems,
+
+            deliveryFee:
+              fulfillment ===
+              "Delivery"
+                ? DELIVERY_FEE
+                : 0,
+
+            total,
+
+            status:
+              "New",
+
+            source:
+              "website",
+
+            createdAt:
+              serverTimestamp(),
+
+            updatedAt:
+              serverTimestamp()
+          }
+        );
+
+        showFormMessage(
+          `Thanks! Your order ${orderNumber} has been received. We'll contact you to confirm it.`,
+          "success"
+        );
+
+        form.reset();
+
+        updateDeliveryFieldsVisibility();
+
+        refreshItemLimits();
+
+      } catch (error) {
+        console.error(
+          "Could not save order to Firebase:",
+          error
+        );
+
+        showFormMessage(
+          "Something went wrong sending your order. Please try again, or email crumbandcrustca@gmail.com.",
+          "error"
+        );
+      } finally {
+        if (submitButton) {
+          submitButton.disabled =
+            false;
+
+          submitButton.textContent =
+            "Send order";
+        }
       }
     }
-  });
+  );
 
-  function showFormMessage(text, type) {
+  function showFormMessage(
+    text,
+    type
+  ) {
     if (!messageElement) {
       return;
     }
 
-    messageElement.textContent = text;
+    messageElement.textContent =
+      text;
+
     messageElement.className =
-      "form-message" + (type ? ` show ${type}` : "");
+      "form-message" +
+      (
+        type
+          ? ` show ${type}`
+          : ""
+      );
   }
+}
+
+/* ==========================================================================
+   Form helpers
+   ========================================================================== */
+
+function getFormValue(
+  formData,
+  possibleNames
+) {
+  for (
+    const name
+    of possibleNames
+  ) {
+    const value =
+      formData.get(name);
+
+    if (
+      value !== null &&
+      String(value).trim()
+    ) {
+      return String(
+        value
+      ).trim();
+    }
+  }
+
+  return "";
 }
