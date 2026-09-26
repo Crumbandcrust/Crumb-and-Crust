@@ -1104,6 +1104,16 @@ function startAdminDashboard() {
                   }
                 );
 
+                const order = state.orders.find(
+                  item => item.id === select.dataset.orderStatus
+                );
+
+                if (order) {
+                  order.status = select.value;
+                }
+
+                renderApp();
+
                 showToast(
                   "Order status updated."
                 );
