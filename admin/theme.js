@@ -489,6 +489,27 @@
           grid-template-columns: 1fr;
         }
       }
+
+      html[data-admin-theme="dark"] .inventory-card {
+        background: var(--theme-surface-2) !important;
+        border-color: var(--theme-border) !important;
+      }
+
+      html[data-admin-theme="dark"] .inventory-card strong,
+      html[data-admin-theme="dark"] .inventory-rules strong,
+      html[data-admin-theme="dark"] .inventory-label {
+        color: var(--theme-text) !important;
+      }
+
+      html[data-admin-theme="dark"] .inventory-card p,
+      html[data-admin-theme="dark"] .inventory-rules {
+        color: var(--theme-text-soft) !important;
+      }
+
+      html[data-admin-theme="dark"] .inventory-rules {
+        background: var(--theme-surface-3) !important;
+        border-color: var(--theme-border) !important;
+      }
     `;
     document.head.appendChild(style);
   }
