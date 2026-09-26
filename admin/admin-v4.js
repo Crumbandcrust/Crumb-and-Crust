@@ -2830,6 +2830,90 @@ function installOrderStyles() {
         font-size: 1.2rem;
       }
     }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin: 22px 0;
+    }
+
+    .inventory-card {
+      background: #fffaf5;
+      border: 1px solid #e9e0d7;
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .inventory-card-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .inventory-label {
+      display: block;
+      color: #776e67;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    .inventory-card strong {
+      display: block;
+      font-size: 2rem;
+      color: #2c2119;
+    }
+
+    .inventory-card p {
+      margin: 12px 0 0;
+      color: #776e67;
+      line-height: 1.5;
+    }
+
+    .inventory-icon {
+      font-size: 1.8rem;
+    }
+
+    .inventory-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: end;
+      border-top: 1px solid #eee8e2;
+      padding-top: 20px;
+    }
+
+    .inventory-form button {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+
+    .inventory-rules {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #f8f5f0;
+      color: #6e665f;
+      line-height: 1.5;
+    }
+
+    .inventory-rules strong {
+      color: #3b3028;
+    }
+
+    @media (max-width: 720px) {
+      .inventory-grid,
+      .inventory-form {
+        grid-template-columns: 1fr;
+      }
+    }
   `;
 
   document.head.appendChild(style);
