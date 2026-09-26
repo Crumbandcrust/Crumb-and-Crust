@@ -48,6 +48,27 @@ function formatItems(items) {
 }
 
 const MAX_WEEKEND_LOAVES = 8;
+const MIN_NOTICE_HOURS = 72;
+const MAX_ADVANCE_DAYS = 21;
+
+function pacificTodayKey() {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.filter(p => p.type !== "literal").map(p => [p.type, p.value]));
+  return values.year + "-" + values.month + "-" + values.day;
+}
+
+function validatePreferredDate(preferredDate) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(preferredDate)) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
+  const [year, month, day] = preferredDate.split("-").map(Number);
+  const target = new Date(year, month - 1, day);
+  const [todayYear, todayMonth, todayDay] = pacificTodayKey().split("-").map(Number);
+  const today = new Date(todayYear, todayMonth - 1, todayDay);
+  const dayOfWeek = target.getDay();
+  if (dayOfWeek !== 0 && dayOfWeek !== 6) throw new HttpsError("invalid-argument", "Pickup and delivery are available Saturday and Sunday only.");
+  const diffHours = (target.getTime() - today.getTime()) / 3600000;
+  if (diffHours < MIN_NOTICE_HOURS) throw new HttpsError("failed-precondition", "That weekend is too soon to order. Orders require at least 72 hours' notice.");
+  if (diffHours > MAX_ADVANCE_DAYS * 24) throw new HttpsError("failed-precondition", "Orders can be scheduled up to 21 days in advance.");
+}
 
 function weekendKey(preferredDate) {
   const date = new Date(String(preferredDate || "") + "T00:00:00");
@@ -84,6 +105,7 @@ exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
   const preferredDate = String(data.preferredDate || "");
   const key = weekendKey(preferredDate);
   if (!key) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
+  validatePreferredDate(preferredDate);
   const { normalized, count } = validateItems(data.items);
   const capacityRef = db.collection("weeklyCapacity").doc(key);
   const orderRef = db.collection("orders").doc();
