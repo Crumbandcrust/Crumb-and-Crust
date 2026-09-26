@@ -179,6 +179,7 @@ const DELIVERY_FEE = 4;
 const MAX_WEEKEND_LOAVES = 8;
 let weekendCapacity = { key: "", remaining: MAX_WEEKEND_LOAVES };
 let capacityUnsubscribe = null;
+let updateCapacityRefresh = null;
 let storeClosed = false;
 
 /* ==========================================================================
@@ -429,29 +430,31 @@ function getWeekendKey(preferredDate) {
 async function wireWeekendCapacity() {
   const select = document.getElementById("pickupDate");
   if (!select) return;
-  try {
-    const { getFirestore, doc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
-    const { getApps, getApp, initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
-    const firebaseApp = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
-    const database = getFirestore(firebaseApp);
-    const update = () => {
-      if (capacityUnsubscribe) { capacityUnsubscribe(); capacityUnsubscribe = null; }
-      const key = getWeekendKey(select.value);
-      weekendCapacity = { key, remaining: MAX_WEEKEND_LOAVES };
-      if (!key) { refreshItemLimits(); return; }
-      capacityUnsubscribe = onSnapshot(doc(database, "weeklyCapacity", key), snapshot => {
-        const reserved = snapshot.exists() ? Number(snapshot.data().reservedLoaves || 0) : 0;
-        weekendCapacity = { key, remaining: Math.max(0, MAX_WEEKEND_LOAVES - reserved) };
-        renderCapacityMessage();
-        refreshItemLimits();
-      }, error => console.error("Could not load weekend capacity:", error));
-    };
-    select.addEventListener("change", update);
-    update();
-  } catch (error) {
-    console.error("Could not connect to weekend capacity:", error);
-  }
+  const refresh = async () => {
+    const key = getWeekendKey(select.value);
+    weekendCapacity = { key, remaining: MAX_WEEKEND_LOAVES };
+    if (!key) { refreshItemLimits(); return; }
+    try {
+      const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js");
+      const { getApps, getApp, initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+      const firebaseApp = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+      const functions = getFunctions(firebaseApp, "us-west1");
+      const getCapacity = httpsCallable(functions, "getWeekendCapacity");
+      const result = await getCapacity({ preferredDate: select.value });
+      weekendCapacity = { key, remaining: Math.max(0, Number(result.data?.remaining ?? MAX_WEEKEND_LOAVES)) };
+      renderCapacityMessage();
+      refreshItemLimits();
+    } catch (error) {
+      console.error("Could not load weekend capacity:", error);
+      renderCapacityMessage();
+      refreshItemLimits();
+    }
+  };
+  select.addEventListener("change", refresh);
+  updateCapacityRefresh = refresh;
+  await refresh();
 }
+
 
 function renderCapacityMessage() {
   if (storeClosed) return;
