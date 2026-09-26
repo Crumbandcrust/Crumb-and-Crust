@@ -1,4 +1,9 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require("firebase-functions/v2/firestore");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+initializeApp();
+const db = getFirestore();
 const { defineSecret } = require("firebase-functions/params");
 const { Resend } = require("resend");
 const logger = require("firebase-functions/logger");
@@ -41,6 +46,106 @@ function formatItems(items) {
     })
     .join("");
 }
+
+const MAX_WEEKEND_LOAVES = 8;
+
+function weekendKey(preferredDate) {
+  const date = new Date(String(preferredDate || "") + "T00:00:00");
+  if (Number.isNaN(date.getTime())) return "";
+  const day = date.getDay();
+  if (day === 0) date.setDate(date.getDate() - 1);
+  else if (day !== 6) date.setDate(date.getDate() - ((day + 1) % 7));
+  return date.toISOString().slice(0, 10);
+}
+
+function validateItems(items) {
+  if (!Array.isArray(items) || !items.length) throw new HttpsError("invalid-argument", "Add at least one item.");
+  const normalized = items.map(item => ({
+    name: String(item.name || "Item"),
+    quantity: Math.max(0, Number(item.quantity) || 0),
+    price: Number(item.price) || 0,
+    subtotal: Number(item.subtotal) || 0
+  })).filter(item => item.quantity > 0);
+  const count = normalized.reduce((sum, item) => sum + item.quantity, 0);
+  if (!count || count > 4) throw new HttpsError("invalid-argument", "Orders are limited to 4 items.");
+  return { normalized, count };
+}
+
+exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
+  const data = request.data || {};
+  const preferredDate = String(data.preferredDate || "");
+  const key = weekendKey(preferredDate);
+  if (!key) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
+  const { normalized, count } = validateItems(data.items);
+  const capacityRef = db.collection("weeklyCapacity").doc(key);
+  const orderRef = db.collection("orders").doc();
+  const orderNumber = "CC-" + Date.now().toString().slice(-8);
+
+  await db.runTransaction(async transaction => {
+    const capacitySnap = await transaction.get(capacityRef);
+    const reserved = Number(capacitySnap.data()?.reservedLoaves || 0);
+    if (reserved + count > MAX_WEEKEND_LOAVES) {
+      throw new HttpsError("resource-exhausted", "Only " + Math.max(0, MAX_WEEKEND_LOAVES - reserved) + " loaves remain for this weekend.");
+    }
+    transaction.set(capacityRef, {
+      reservedLoaves: reserved + count,
+      maxLoaves: MAX_WEEKEND_LOAVES,
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+    transaction.set(orderRef, {
+      orderNumber,
+      customer: String(data.customerName || ""),
+      customerName: String(data.customerName || ""),
+      phone: String(data.phone || ""),
+      email: String(data.email || ""),
+      fulfillment: String(data.fulfillment || "Pickup"),
+      deliveryAddress: String(data.deliveryAddress || ""),
+      preferredDate,
+      notes: String(data.notes || ""),
+      items: normalized,
+      itemsSummary: normalized.map(item => item.quantity + "× " + item.name).join(", "),
+      itemCount: count,
+      deliveryFee: Number(data.deliveryFee) || 0,
+      total: Number(data.total) || 0,
+      status: "New",
+      source: "website",
+      weekendKey: key,
+      capacityUnits: count,
+      inventoryDeducted: false,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+  });
+  return { orderId: orderRef.id, orderNumber };
+});
+
+exports.releaseCancelledOrderCapacity = onDocumentUpdated({ document: "orders/{orderId}", region: "us-west1" }, async event => {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after) return;
+  const wasCancelled = String(before.status || "").toLowerCase() === "cancelled";
+  const isCancelled = String(after.status || "").toLowerCase() === "cancelled";
+  if (wasCancelled === isCancelled || !after.weekendKey) return;
+  const ref = db.collection("weeklyCapacity").doc(after.weekendKey);
+  await db.runTransaction(async transaction => {
+    const snap = await transaction.get(ref);
+    const reserved = Number(snap.data()?.reservedLoaves || 0);
+    const units = Number(after.capacityUnits || after.itemCount || 0);
+    transaction.set(ref, { reservedLoaves: Math.max(0, reserved + (isCancelled ? -units : units)), maxLoaves: MAX_WEEKEND_LOAVES, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  });
+});
+
+exports.releaseDeletedOrderCapacity = onDocumentDeleted({ document: "orders/{orderId}", region: "us-west1" }, async event => {
+  const order = event.data?.data();
+  if (!order?.weekendKey || String(order.status || "").toLowerCase() === "cancelled") return;
+  const ref = db.collection("weeklyCapacity").doc(order.weekendKey);
+  await db.runTransaction(async transaction => {
+    const snap = await transaction.get(ref);
+    const reserved = Number(snap.data()?.reservedLoaves || 0);
+    const units = Number(order.capacityUnits || order.itemCount || 0);
+    transaction.set(ref, { reservedLoaves: Math.max(0, reserved - units), maxLoaves: MAX_WEEKEND_LOAVES, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  });
+});
 
 exports.sendNewOrderEmail = onDocumentCreated(
   {
