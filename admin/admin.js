@@ -812,7 +812,7 @@ function startAdminDashboard() {
                 id="mobileMenuButton"
                 type="button"
               >
-                Menu
+                Open menu
               </button>
 
             </header>
