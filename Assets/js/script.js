@@ -176,6 +176,9 @@ const ORDER_SETTINGS = {
 
 const MAX_ITEMS_PER_ORDER = 4;
 const DELIVERY_FEE = 4;
+const MAX_WEEKEND_LOAVES = 8;
+let weekendCapacity = { key: "", remaining: MAX_WEEKEND_LOAVES };
+let capacityUnsubscribe = null;
 
 /* ==========================================================================
    Firebase configuration
@@ -211,6 +214,7 @@ function initializeOrderForm(form) {
   listenForVacationMode();
 
   populatePickupDates();
+  wireWeekendCapacity();
 
   wireDeliveryToggle();
 
@@ -408,6 +412,62 @@ function renderStatusBanner(
 
   banner.textContent =
     message;
+}
+
+function getWeekendKey(preferredDate) {
+  const date = new Date(String(preferredDate || "") + "T00:00:00");
+  if (Number.isNaN(date.getTime())) return "";
+  const day = date.getDay();
+  if (day === 0) date.setDate(date.getDate() - 1);
+  else if (day !== 6) date.setDate(date.getDate() - ((day + 1) % 7));
+  return date.toISOString().slice(0, 10);
+}
+
+async function wireWeekendCapacity() {
+  const select = document.getElementById("pickupDate");
+  if (!select) return;
+  try {
+    const { getFirestore, doc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js");
+    const { getApps, getApp, initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+    const firebaseApp = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+    const database = getFirestore(firebaseApp);
+    const update = () => {
+      if (capacityUnsubscribe) { capacityUnsubscribe(); capacityUnsubscribe = null; }
+      const key = getWeekendKey(select.value);
+      weekendCapacity = { key, remaining: MAX_WEEKEND_LOAVES };
+      if (!key) { refreshItemLimits(); return; }
+      capacityUnsubscribe = onSnapshot(doc(database, "weeklyCapacity", key), snapshot => {
+        const reserved = snapshot.exists() ? Number(snapshot.data().reservedLoaves || 0) : 0;
+        weekendCapacity = { key, remaining: Math.max(0, MAX_WEEKEND_LOAVES - reserved) };
+        renderCapacityMessage();
+        refreshItemLimits();
+      }, error => console.error("Could not load weekend capacity:", error));
+    };
+    select.addEventListener("change", update);
+    update();
+  } catch (error) {
+    console.error("Could not connect to weekend capacity:", error);
+  }
+}
+
+function renderCapacityMessage() {
+  const banner = document.getElementById("orderStatus");
+  const select = document.getElementById("pickupDate");
+  if (!banner || !select || !select.value) return;
+  const remaining = weekendCapacity.remaining;
+  if (remaining === 0) {
+    banner.className = "status-banner closed";
+    banner.textContent = "This weekend is sold out. Please choose another weekend.";
+    const wrapper = document.getElementById("orderFormWrap");
+    if (wrapper) wrapper.style.display = "none";
+    return;
+  }
+  const wrapper = document.getElementById("orderFormWrap");
+  if (wrapper) wrapper.style.display = "";
+  banner.className = "status-banner open";
+  banner.textContent = remaining <= 2
+    ? "Now accepting orders. Only " + remaining + " " + (remaining === 1 ? "loaf" : "loaves") + " remaining."
+    : "Now accepting orders. We bake in small batches, so get your order in early.";
 }
 
 function formatReopeningDate(value) {
@@ -693,8 +753,11 @@ function refreshItemLimits() {
     );
 
   if (counter) {
-    counter.textContent =
-      `${totalItems} of ${MAX_ITEMS_PER_ORDER} selected`;
+    const availableForWeekend = Math.max(0, Number(weekendCapacity.remaining));
+    const itemLimit = Math.min(MAX_ITEMS_PER_ORDER, availableForWeekend || MAX_ITEMS_PER_ORDER);
+    counter.textContent = availableForWeekend && availableForWeekend <= 2
+      ? `${totalItems} of ${MAX_ITEMS_PER_ORDER} selected · ${availableForWeekend} remaining`
+      : `${totalItems} of ${MAX_ITEMS_PER_ORDER} selected`;
 
     counter.classList.toggle(
       "at-max",
@@ -746,8 +809,8 @@ function refreshItemLimits() {
 
       increaseButton.disabled =
         quantity >= itemMaximum ||
-        totalItems >=
-          MAX_ITEMS_PER_ORDER;
+        totalItems >= itemLimit ||
+        (weekendCapacity.key && totalItems >= availableForWeekend);
 
       decreaseButton.disabled =
         quantity <= 0;
@@ -1041,76 +1104,28 @@ function wireSubmit(form) {
       }
 
       try {
-        const database =
-          await getStorefrontDatabase();
-
-        const {
-          addDoc,
-          collection,
-          serverTimestamp
-        } = await import(
-          "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"
-        );
-
-        await addDoc(
-          collection(
-            database,
-            "orders"
-          ),
-          {
-            orderNumber,
-
-            customer:
-              customerName,
-
-            customerName,
-
-            phone,
-
-            email,
-
-            fulfillment,
-
-            deliveryAddress,
-
-            preferredDate,
-
-            notes,
-
-            items,
-
-            itemsSummary,
-
-            item:
-              itemsSummary,
-
-            itemCount:
-              totalItems,
-
-            deliveryFee:
-              fulfillment ===
-              "Delivery"
-                ? DELIVERY_FEE
-                : 0,
-
-            total,
-
-            status:
-              "New",
-
-            source:
-              "website",
-
-            createdAt:
-              serverTimestamp(),
-
-            updatedAt:
-              serverTimestamp()
-          }
-        );
+        const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js");
+        const { getApps, getApp, initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+        const firebaseApp = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+        const functions = getFunctions(firebaseApp, "us-west1");
+        const placeOrder = httpsCallable(functions, "placeOrder");
+        const result = await placeOrder({
+          customerName,
+          email,
+          phone,
+          fulfillment,
+          deliveryAddress,
+          preferredDate,
+          notes,
+          items,
+          deliveryFee: fulfillment === "Delivery" ? DELIVERY_FEE : 0,
+          total
+        });
+        const savedOrderNumber = result.data?.orderNumber || orderNumber;
+        if (typeof result.data?.remaining === "number") weekendCapacity.remaining = result.data.remaining;
 
         showFormMessage(
-          `Thanks! Your order ${orderNumber} has been received. We'll contact you to confirm it.`,
+          `Thanks! Your order ${savedOrderNumber} has been received.\n\nDate: ${preferredDate}\nItems: ${itemsSummary}\nTotal: ${total.toFixed(2)}\n\nWe'll contact you to confirm pickup or delivery details.`,
           "success"
         );
 
