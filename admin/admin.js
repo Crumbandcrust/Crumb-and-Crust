@@ -997,6 +997,11 @@ function startAdminDashboard() {
     */
 
     function renderOrders(container) {
+      const activeOrders = state.orders.filter(
+        order =>
+          String(order.status || "").toLowerCase() !== "completed"
+      );
+
       container.innerHTML = `
         <div class="panel">
 
@@ -1012,9 +1017,9 @@ function startAdminDashboard() {
               </h2>
 
               <p class="order-count">
-                ${state.orders.length}
+                ${activeOrders.length}
                 ${
-                  state.orders.length === 1
+                  activeOrders.length === 1
                     ? "order"
                     : "orders"
                 }
@@ -1036,17 +1041,17 @@ function startAdminDashboard() {
 
 
           ${
-            state.orders.length
+            activeOrders.length
               ? `
                 <div class="modern-orders-grid">
-                  ${state.orders
+                  ${activeOrders
                     .map(renderOrderCard)
                     .join("")}
                 </div>
               `
               : createEmptyState(
-                  "No orders yet",
-                  "Orders stored in Firestore will appear here."
+                  "No active orders",
+                  "New orders will appear here."
                 )
           }
 
