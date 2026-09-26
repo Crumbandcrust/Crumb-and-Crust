@@ -1482,7 +1482,7 @@ function startAdminDashboard() {
         order.flourUsed = { breadFlourGrams: breadUsed, apFlourGrams: apUsed };
         renderApp();
         showToast("Order marked Ready. Used " + formatGrams(breadUsed) + " bread flour and " + formatGrams(apUsed) + " AP flour.");
-      } catch (error) { reportError(error.message || "Could not mark the order Ready.", error); }
+      } catch (error) { renderApp(); reportError(error.message || "Could not mark the order Ready.", error); }
     }
 
     /*
