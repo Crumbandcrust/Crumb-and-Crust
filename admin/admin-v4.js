@@ -142,7 +142,8 @@ function startAdminDashboard() {
         products: "Products",
         coupons: "Coupons",
         analytics: "Analytics",
-        settings: "Settings"
+        settings: "Settings",
+        inventory: "Inventory"
       };
 
       return titles[state.activePage] || "Dashboard";
@@ -772,6 +773,7 @@ function startAdminDashboard() {
                 ${createNavButton("products", "Products", "◇")}
                 ${createNavButton("coupons", "Coupons", "%")}
                 ${createNavButton("analytics", "Analytics", "↗")}
+                ${createNavButton("inventory", "Inventory", "▥")}
               </div>
 
               <div class="nav-group">
@@ -912,6 +914,10 @@ function startAdminDashboard() {
 
         case "settings":
           renderSettings(container);
+          break;
+
+        case "inventory":
+          renderInventory(container);
           break;
 
         default:
@@ -2194,6 +2200,44 @@ function startAdminDashboard() {
         + "<div><span>Unavailable products</span><strong>" + state.products.filter(product => !product.available).length + "</strong></div>"
         + "<div><span>Active coupons</span><strong>" + state.coupons.filter(coupon => coupon.active).length + "</strong></div>"
         + "<div><span>Ordering</span><strong>" + (state.vacation.enabled ? "Paused" : "Open") + "</strong></div></div></section></div>";
+    }
+
+    /*
+    ==========================================================
+    INVENTORY
+    ==========================================================
+    */
+
+    function renderInventory(container) {
+      container.innerHTML = '<div class="panel narrow-panel">' +
+        '<div class="panel-header"><div><p class="eyebrow">Inventory</p><h2>Flour inventory</h2></div></div>' +
+        '<p style="margin-top:0;color:#756d66;">Enter the amount of flour you currently have. Amounts are saved in grams.</p>' +
+        '<form class="admin-form" id="inventoryForm">' +
+          '<label>Bread flour (grams)<input name="breadFlour" type="number" min="0" step="1" required value="0"></label>' +
+          '<label>AP flour (grams)<input name="apFlour" type="number" min="0" step="1" required value="0"></label>' +
+          '<button class="primary-button" type="submit">Save inventory</button>' +
+        '</form></div>' +
+        '<div class="dashboard-cards" style="margin-top:24px;">' +
+          '<article class="dashboard-card"><p class="card-label">Sourdough uses</p><strong>500 g</strong><span>Per sourdough item</span></article>' +
+          '<article class="dashboard-card"><p class="card-label">Focaccia uses</p><strong>575 g</strong><span>Per focaccia, including small focaccia</span></article>' +
+        '</div>';
+
+      document.getElementById("inventoryForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        try {
+          await setDoc(doc(db, "settings", "store"), {
+            inventory: {
+              breadFlourGrams: Math.max(0, Number(formData.get("breadFlour")) || 0),
+              apFlourGrams: Math.max(0, Number(formData.get("apFlour")) || 0)
+            },
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          showToast("Inventory saved.");
+        } catch (error) {
+          reportError("Could not save inventory.", error);
+        }
+      });
     }
 
     /*
