@@ -1627,6 +1627,14 @@ function startAdminDashboard() {
 
                             <button
                               class="secondary-button small-button"
+                              data-edit-product="${escapeHtml(product.id)}"
+                              type="button"
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              class="secondary-button small-button"
                               data-toggle-product="${escapeHtml(product.id)}"
                               type="button"
                             >
@@ -1669,6 +1677,14 @@ function startAdminDashboard() {
           "click",
           renderProductForm
         );
+
+
+      document.querySelectorAll("[data-edit-product]").forEach(button => {
+        button.addEventListener("click", () => {
+          const product = state.products.find(item => item.id === button.dataset.editProduct);
+          if (product) renderProductForm(product);
+        });
+      });
 
 
       document
@@ -1760,119 +1776,43 @@ function startAdminDashboard() {
     }
 
 
-    function renderProductForm() {
-      const formArea =
-        document.getElementById(
-          "productFormArea"
-        );
-
+    function renderProductForm(product = null) {
+      const formArea = document.getElementById("productFormArea");
       if (!formArea) return;
-
-
+      const editing = Boolean(product);
       formArea.innerHTML = `
-        <form
-          class="admin-form inline-form"
-          id="productForm"
-        >
-
-          <label>
-            Product name
-
-            <input
-              name="name"
-              required
-              maxlength="100"
-            >
-          </label>
-
-          <label>
-            Price
-
-            <input
-              name="price"
-              type="number"
-              required
-              min="0"
-              step="0.01"
-            >
-          </label>
-
+        <form class="admin-form inline-form" id="productForm">
+          <label>Product name<input name="name" required maxlength="100" value="${escapeHtml(product?.name || "")}"></label>
+          <label>Price<input name="price" type="number" required min="0" step="0.01" value="${Number(product?.price || 0).toFixed(2)}"></label>
+          <label>Description<input name="description" maxlength="250" value="${escapeHtml(product?.description || "")}"></label>
+          <label>Flour used per item (grams)<input name="flourGrams" type="number" min="0" step="1" value="${Number(product?.flourGrams || 0)}"></label>
+          <label>Ingredients<input name="ingredients" maxlength="500" value="${escapeHtml(product?.ingredients || "")}"></label>
           <div class="form-actions">
-
-            <button
-              class="primary-button"
-              type="submit"
-            >
-              Save product
-            </button>
-
-            <button
-              class="secondary-button"
-              id="cancelProductButton"
-              type="button"
-            >
-              Cancel
-            </button>
-
+            <button class="primary-button" type="submit">${editing ? "Save changes" : "Save product"}</button>
+            <button class="secondary-button" id="cancelProductButton" type="button">Cancel</button>
           </div>
-
-        </form>
-      `;
-
-
-      document
-        .getElementById("cancelProductButton")
-        ?.addEventListener("click", () => {
+        </form>`;
+      document.getElementById("cancelProductButton")?.addEventListener("click", () => { formArea.innerHTML = ""; });
+      document.getElementById("productForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const values = {
+          name: String(formData.get("name")).trim(),
+          price: Number(formData.get("price")) || 0,
+          description: String(formData.get("description") || "").trim(),
+          flourGrams: Math.max(0, Number(formData.get("flourGrams")) || 0),
+          ingredients: String(formData.get("ingredients") || "").trim(),
+          updatedAt: serverTimestamp()
+        };
+        try {
+          if (editing) await updateDoc(doc(db, "products", product.id), values);
+          else await addDoc(collection(db, "products"), { ...values, available: true, createdAt: serverTimestamp() });
+          showToast(editing ? "Product updated." : "Product added.");
           formArea.innerHTML = "";
-        });
-
-
-      document
-        .getElementById("productForm")
-        ?.addEventListener(
-          "submit",
-          async event => {
-
-            event.preventDefault();
-
-            const formData =
-              new FormData(event.currentTarget);
-
-            try {
-              await addDoc(
-                collection(db, "products"),
-                {
-                  name:
-                    String(
-                      formData.get("name")
-                    ).trim(),
-
-                  price:
-                    Number(
-                      formData.get("price")
-                    ),
-
-                  available: true,
-
-                  createdAt:
-                    serverTimestamp(),
-
-                  updatedAt:
-                    serverTimestamp()
-                }
-              );
-
-              showToast("Product added.");
-              formArea.innerHTML = "";
-
-            } catch (error) {
-              reportError(
-                "Could not add the product.",
-                error
-              );
-            }
-          }
-        );
+        } catch (error) {
+          reportError(editing ? "Could not update the product." : "Could not add the product.", error);
+        }
+      });
     }
 
 
@@ -2147,24 +2087,32 @@ function startAdminDashboard() {
     */
 
     function renderAnalytics(container) {
-      const completed = state.orders.filter(order => order.status === "Completed");
-      const cancelled = state.orders.filter(order => order.status === "Cancelled");
+      const completed = state.orders.filter(order => normalizeOrderStatus(order.status) === "completed");
+      const cancelled = state.orders.filter(order => normalizeOrderStatus(order.status) === "cancelled");
       const revenue = completed.reduce((sum, order) => sum + Number(order.total || 0), 0);
       const average = completed.length ? revenue / completed.length : 0;
-      const statusNames = ["New", "Preparing", "Ready", "Completed", "Cancelled"];
-      container.innerHTML = "<div class=\"dashboard-cards\">"
-        + "<article class=\"dashboard-card\"><p class=\"card-label\">Completed revenue</p><strong>" + formatMoney(revenue) + "</strong><span>Completed orders only</span></article>"
-        + "<article class=\"dashboard-card\"><p class=\"card-label\">Average order</p><strong>" + formatMoney(average) + "</strong><span>Across " + completed.length + " completed orders</span></article>"
-        + "<article class=\"dashboard-card\"><p class=\"card-label\">Completion rate</p><strong>" + (state.orders.length ? Math.round(completed.length / state.orders.length * 100) : 0) + "%</strong><span>" + cancelled.length + " cancelled</span></article>"
-        + "<article class=\"dashboard-card\"><p class=\"card-label\">Total orders</p><strong>" + state.orders.length + "</strong><span>All loaded orders</span></article></div>"
-        + "<div class=\"analytics-grid\"><section class=\"panel\"><div class=\"panel-header\"><div><p class=\"eyebrow\">Order pipeline</p><h2>Status breakdown</h2></div></div><div class=\"bar-list\">"
-        + statusNames.map(status => { const count = state.orders.filter(order => order.status === status).length; const pct = state.orders.length ? Math.round(count / state.orders.length * 100) : 0; return "<div class=\"bar-row\"><div><span>" + status + "</span><strong>" + count + "</strong></div><div class=\"bar-track\"><i style=\"width:" + pct + "%\"></i></div></div>"; }).join("")
-        + "</div></section><section class=\"panel\"><div class=\"panel-header\"><div><p class=\"eyebrow\">Store health</p><h2>At a glance</h2></div></div><div class=\"health-list\">"
-        + "<div><span>Available products</span><strong>" + state.products.filter(product => product.available).length + "</strong></div>"
-        + "<div><span>Unavailable products</span><strong>" + state.products.filter(product => !product.available).length + "</strong></div>"
-        + "<div><span>Active coupons</span><strong>" + state.coupons.filter(coupon => coupon.active).length + "</strong></div>"
-        + "<div><span>Ordering</span><strong>" + (state.vacation.enabled ? "Paused" : "Open") + "</strong></div></div></section></div>";
+      const productCounts = new Map();
+      state.orders.forEach(order => (order.items || []).forEach(item => {
+        const name = String(item.name || "Item");
+        productCounts.set(name, (productCounts.get(name) || 0) + (Number(item.quantity) || 0));
+      }));
+      const topProducts = Array.from(productCounts.entries()).sort((a,b) => b[1] - a[1]).slice(0, 8);
+      container.innerHTML = `<div class="dashboard-cards">
+        <article class="dashboard-card"><p class="card-label">Completed revenue</p><strong>${formatMoney(revenue)}</strong><span>Completed orders</span></article>
+        <article class="dashboard-card"><p class="card-label">Average order</p><strong>${formatMoney(average)}</strong><span>${completed.length} completed orders</span></article>
+        <article class="dashboard-card"><p class="card-label">Total orders</p><strong>${state.orders.length}</strong><span>${cancelled.length} cancelled</span></article>
+        <article class="dashboard-card"><p class="card-label">Items sold</p><strong>${state.orders.reduce((sum,o)=>sum+getOrderItemsCount(o),0)}</strong><span>Across all orders</span></article>
+      </div>
+      <div class="analytics-grid">
+        <section class="panel"><div class="panel-header"><div><p class="eyebrow">Products</p><h2>Most ordered</h2></div></div>
+          ${topProducts.length ? '<div class="health-list">' + topProducts.map(([name,count]) => '<div><span>' + escapeHtml(name) + '</span><strong>' + count + '</strong></div>').join('') + '</div>' : createEmptyState("No sales yet","Product sales will appear here.")}
+        </section>
+        <section class="panel"><div class="panel-header"><div><p class="eyebrow">Order pipeline</p><h2>Status breakdown</h2></div></div>
+          <div class="health-list">${["New","Preparing","Ready","Completed","Cancelled"].map(status => '<div><span>' + status + '</span><strong>' + state.orders.filter(order => normalizeOrderStatus(order.status) === status.toLowerCase()).length + '</strong></div>').join('')}</div>
+        </section>
+      </div>`;
     }
+
 
     /*
     ==========================================================
