@@ -81,12 +81,14 @@ exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
   const orderRef = db.collection("orders").doc();
   const orderNumber = "CC-" + Date.now().toString().slice(-8);
 
+  let remainingAfter = MAX_WEEKEND_LOAVES;
   await db.runTransaction(async transaction => {
     const capacitySnap = await transaction.get(capacityRef);
     const reserved = Number(capacitySnap.data()?.reservedLoaves || 0);
     if (reserved + count > MAX_WEEKEND_LOAVES) {
       throw new HttpsError("resource-exhausted", "Only " + Math.max(0, MAX_WEEKEND_LOAVES - reserved) + " loaves remain for this weekend.");
     }
+    remainingAfter = MAX_WEEKEND_LOAVES - reserved - count;
     transaction.set(capacityRef, {
       reservedLoaves: reserved + count,
       maxLoaves: MAX_WEEKEND_LOAVES,
@@ -116,7 +118,7 @@ exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
       updatedAt: FieldValue.serverTimestamp()
     });
   });
-  return { orderId: orderRef.id, orderNumber };
+  return { orderId: orderRef.id, orderNumber, remaining: remainingAfter };
 });
 
 exports.releaseCancelledOrderCapacity = onDocumentUpdated({ document: "orders/{orderId}", region: "us-west1" }, async event => {
