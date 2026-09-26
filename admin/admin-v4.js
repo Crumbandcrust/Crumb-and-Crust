@@ -137,6 +137,7 @@ function startAdminDashboard() {
       const titles = {
         dashboard: "Dashboard",
         orders: "Orders",
+        orderHistory: "Order History",
         vacation: "Vacation Mode",
         products: "Products",
         coupons: "Coupons",
@@ -767,6 +768,7 @@ function startAdminDashboard() {
                 <p class="nav-group-label">Manage</p>
                 ${createNavButton("dashboard", "Dashboard", "⌂")}
                 ${createNavButton("orders", "Orders", "▤")}
+                ${createNavButton("orderHistory", "Order History", "◷")}
                 ${createNavButton("products", "Products", "◇")}
                 ${createNavButton("coupons", "Coupons", "%")}
                 ${createNavButton("analytics", "Analytics", "↗")}
@@ -886,6 +888,10 @@ function startAdminDashboard() {
       switch (state.activePage) {
         case "orders":
           renderOrders(container);
+          break;
+
+        case "orderHistory":
+          renderOrderHistory(container);
           break;
 
         case "vacation":
@@ -1224,6 +1230,60 @@ function startAdminDashboard() {
             }
           );
         });
+    }
+
+
+    function renderOrderHistory(container) {
+      const completedOrders = state.orders.filter(order =>
+        normalizeOrderStatus(order.status) === "completed"
+      );
+
+      container.innerHTML = `
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Order history</p>
+              <h2>Completed orders</h2>
+              <p class="order-count">${completedOrders.length} ${completedOrders.length === 1 ? "completed order" : "completed orders"}</p>
+            </div>
+          </div>
+          ${completedOrders.length
+            ? `<div class="modern-orders-grid">${completedOrders.map(renderOrderCard).join("")}</div>`
+            : createEmptyState("No completed orders yet", "Orders marked Completed will appear here.")
+          }
+        </div>
+      `;
+
+      document.querySelectorAll("[data-order-status]").forEach(select => {
+        select.addEventListener("change", async () => {
+          const orderId = select.dataset.orderStatus;
+          const nextStatus = select.value;
+          const order = state.orders.find(item => item.id === orderId);
+          const previousStatus = order?.status;
+          if (order) order.status = nextStatus;
+          renderApp();
+          try {
+            await updateDoc(doc(db, "orders", orderId), { status: nextStatus, updatedAt: serverTimestamp() });
+            showToast("Order status updated.");
+          } catch (error) {
+            if (order) order.status = previousStatus;
+            renderApp();
+            reportError("Could not update the order.", error);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-delete-order]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!window.confirm("Delete this order?")) return;
+          try {
+            await deleteDoc(doc(db, "orders", button.dataset.deleteOrder));
+            showToast("Order deleted.");
+          } catch (error) {
+            reportError("Could not delete the order.", error);
+          }
+        });
+      });
     }
 
 
