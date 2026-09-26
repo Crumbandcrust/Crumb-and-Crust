@@ -2,31 +2,28 @@
   const STORAGE_KEY = "crumb-crust-admin-theme";
   const THEMES = ["light", "dark", "auto"];
 
-  function getStoredTheme() {
+  const getStoredTheme = () => {
     const value = localStorage.getItem(STORAGE_KEY);
     return THEMES.includes(value) ? value : "auto";
-  }
+  };
 
-  function getEffectiveTheme(theme) {
-    if (theme === "auto") {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    }
-    return theme;
-  }
+  const getEffectiveTheme = theme =>
+    theme === "auto"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : theme;
 
   function applyTheme(theme = getStoredTheme()) {
     const effective = getEffectiveTheme(theme);
     document.documentElement.dataset.adminTheme = effective;
-    document.documentElement.style.colorScheme = effective;
     document.documentElement.dataset.adminThemePreference = theme;
+    document.documentElement.style.colorScheme = effective;
   }
 
   function saveTheme(theme) {
     if (!THEMES.includes(theme)) return;
     localStorage.setItem(STORAGE_KEY, theme);
     applyTheme(theme);
+    updateThemeButtons();
   }
 
   function installStyles() {
@@ -35,37 +32,24 @@
     const style = document.createElement("style");
     style.id = "admin-theme-styles";
     style.textContent = `
-      html[data-admin-theme="dark"] body {
-        background: #171411 !important;
-        color: #eee7df !important;
-      }
-
+      html[data-admin-theme="dark"] body,
       html[data-admin-theme="dark"] .admin-layout,
       html[data-admin-theme="dark"] .main-content {
-        background: #171411 !important;
+        background: #151210 !important;
+        color: #f2ede7 !important;
       }
 
-      html[data-admin-theme="dark"] .sidebar {
+      html[data-admin-theme="dark"] .sidebar,
+      html[data-admin-theme="dark"] .topbar,
+      html[data-admin-theme="dark"] .panel,
+      html[data-admin-theme="dark"] .dashboard-card,
+      html[data-admin-theme="dark"] .modern-order-card,
+      html[data-admin-theme="dark"] .coupon-card,
+      html[data-admin-theme="dark"] .empty-state,
+      html[data-admin-theme="dark"] .theme-setting {
         background: #211c18 !important;
-        border-color: #3b332d !important;
-        color: #eee7df !important;
-      }
-
-      html[data-admin-theme="dark"] .sidebar h2,
-      html[data-admin-theme="dark"] .sidebar p,
-      html[data-admin-theme="dark"] .sidebar span,
-      html[data-admin-theme="dark"] .nav-button {
-        color: #eee7df !important;
-      }
-
-      html[data-admin-theme="dark"] .nav-button:hover,
-      html[data-admin-theme="dark"] .nav-button.active {
-        background: #342b25 !important;
-      }
-
-      html[data-admin-theme="dark"] .topbar {
-        background: #171411 !important;
-        border-color: #3b332d !important;
+        color: #f2ede7 !important;
+        border-color: #40362f !important;
       }
 
       html[data-admin-theme="dark"] h1,
@@ -73,8 +57,9 @@
       html[data-admin-theme="dark"] h3,
       html[data-admin-theme="dark"] strong,
       html[data-admin-theme="dark"] label,
-      html[data-admin-theme="dark"] .customer-name {
-        color: #f4eee7 !important;
+      html[data-admin-theme="dark"] .nav-button,
+      html[data-admin-theme="dark"] .sidebar span {
+        color: #f2ede7 !important;
       }
 
       html[data-admin-theme="dark"] p,
@@ -86,116 +71,102 @@
       html[data-admin-theme="dark"] .order-muted,
       html[data-admin-theme="dark"] .order-count,
       html[data-admin-theme="dark"] .status-control span {
-        color: #bdb2a8 !important;
+        color: #bfb5ac !important;
       }
 
-      html[data-admin-theme="dark"] .panel,
-      html[data-admin-theme="dark"] .dashboard-card,
-      html[data-admin-theme="dark"] .modern-order-card,
-      html[data-admin-theme="dark"] .coupon-card,
-      html[data-admin-theme="dark"] .empty-state {
-        background: #211c18 !important;
-        border-color: #3b332d !important;
-        color: #eee7df !important;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22) !important;
+      html[data-admin-theme="dark"] .nav-button:hover,
+      html[data-admin-theme="dark"] .nav-button.active {
+        background: #342a23 !important;
       }
 
       html[data-admin-theme="dark"] input,
       html[data-admin-theme="dark"] textarea,
-      html[data-admin-theme="dark"] select {
-        background: #171411 !important;
-        color: #eee7df !important;
-        border-color: #4a4038 !important;
-      }
-
-      html[data-admin-theme="dark"] input::placeholder,
-      html[data-admin-theme="dark"] textarea::placeholder {
-        color: #81766d !important;
+      html[data-admin-theme="dark"] select,
+      html[data-admin-theme="dark"] .order-status-select {
+        background: #151210 !important;
+        color: #f2ede7 !important;
+        border-color: #51463d !important;
       }
 
       html[data-admin-theme="dark"] .order-time-box {
-        background: #2a231e !important;
+        background: #2b241f !important;
       }
 
       html[data-admin-theme="dark"] .order-items-section {
-        border-color: #3b332d !important;
-      }
-
-      html[data-admin-theme="dark"] .order-item-row,
-      html[data-admin-theme="dark"] .delivery-address {
-        color: #d3c8bf !important;
-      }
-
-      html[data-admin-theme="dark"] .order-status-select {
-        background: #171411 !important;
-        color: #eee7df !important;
-        border-color: #4a4038 !important;
-      }
-
-      html[data-admin-theme="dark"] .secondary-button {
-        background: #2a231e !important;
-        color: #eee7df !important;
-        border-color: #4a4038 !important;
-      }
-
-      html[data-admin-theme="dark"] .theme-setting {
-        background: #211c18 !important;
-        border-color: #3b332d !important;
-      }
-
-      html[data-admin-theme="dark"] .theme-option {
-        background: #171411 !important;
-        color: #eee7df !important;
-        border-color: #4a4038 !important;
-      }
-
-      html[data-admin-theme="dark"] .theme-option.selected {
-        background: #342b25 !important;
-        border-color: #b87333 !important;
+        border-color: #40362f !important;
       }
 
       .theme-setting {
         margin-top: 24px;
-        padding: 20px;
-        border: 1px solid #e9e5df;
-        border-radius: 14px;
+        padding: 22px;
+        border: 1px solid #e4ded7;
+        border-radius: 16px;
         background: #fff;
       }
 
       .theme-setting h3 {
         margin: 0 0 6px;
+        font-size: 1.05rem;
       }
 
       .theme-setting p {
-        margin: 0 0 16px;
-        color: #777;
+        margin: 0 0 18px;
+        color: #706861;
       }
 
       .theme-options {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
       }
 
       .theme-option {
-        appearance: none;
-        border: 1px solid #d8d2cc;
-        border-radius: 10px;
-        background: #fff;
-        color: #302923;
-        padding: 12px 10px;
-        font: inherit;
-        font-weight: 700;
-        cursor: pointer;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 48px !important;
+        width: 100% !important;
+        padding: 12px 16px !important;
+        border: 2px solid #d5cec7 !important;
+        border-radius: 10px !important;
+        background: #fff !important;
+        color: #302923 !important;
+        font: inherit !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        opacity: 1 !important;
+        visibility: visible !important;
       }
 
       .theme-option:hover {
-        border-color: #a96b38;
+        border-color: #a96b38 !important;
+        background: #faf7f3 !important;
       }
 
       .theme-option.selected {
-        border-color: #a96b38;
-        box-shadow: 0 0 0 2px rgba(169, 107, 56, 0.15);
+        border-color: #a96b38 !important;
+        background: #f4e8dc !important;
+        color: #6e3e1e !important;
+        box-shadow: 0 0 0 2px rgba(169,107,56,.16) !important;
+      }
+
+      html[data-admin-theme="dark"] .theme-option {
+        background: #171411 !important;
+        color: #f2ede7 !important;
+        border-color: #51463d !important;
+      }
+
+      html[data-admin-theme="dark"] .theme-option:hover {
+        background: #2d251f !important;
+        border-color: #b87333 !important;
+      }
+
+      html[data-admin-theme="dark"] .theme-option.selected {
+        background: #3a2c22 !important;
+        color: #f4c99d !important;
+        border-color: #c47b3d !important;
       }
 
       @media (max-width: 600px) {
@@ -204,43 +175,7 @@
         }
       }
     `;
-
     document.head.appendChild(style);
-  }
-
-  function addThemeSetting() {
-    if (document.documentElement.dataset.adminThemePreference === "dark" ||
-        document.documentElement.dataset.adminThemePreference === "light" ||
-        document.documentElement.dataset.adminThemePreference === "auto") {
-      // Preference is already initialized.
-    }
-
-    const form = document.getElementById("settingsForm");
-    if (!form || document.getElementById("themeSetting")) return;
-
-    const setting = document.createElement("section");
-    setting.id = "themeSetting";
-    setting.className = "theme-setting";
-    setting.innerHTML = `
-      <h3>Admin appearance</h3>
-      <p>Choose how the admin dashboard should look. Auto follows your device's light or dark setting.</p>
-      <div class="theme-options" role="group" aria-label="Admin appearance">
-        <button type="button" class="theme-option" data-theme-option="light">☀️ Light</button>
-        <button type="button" class="theme-option" data-theme-option="dark">🌙 Dark</button>
-        <button type="button" class="theme-option" data-theme-option="auto">🖥 Auto</button>
-      </div>
-    `;
-
-    form.insertAdjacentElement("afterend", setting);
-
-    setting.querySelectorAll("[data-theme-option]").forEach(button => {
-      button.addEventListener("click", () => {
-        saveTheme(button.dataset.themeOption);
-        updateThemeButtons();
-      });
-    });
-
-    updateThemeButtons();
   }
 
   function updateThemeButtons() {
@@ -252,19 +187,56 @@
     });
   }
 
-  installStyles();
-  applyTheme();
+  function addThemeSetting() {
+    const form = document.getElementById("settingsForm");
+    if (!form || document.getElementById("themeSetting")) return;
 
-  const media = window.matchMedia("(prefers-color-scheme: dark)");
-  media.addEventListener?.("change", () => {
-    if (getStoredTheme() === "auto") applyTheme("auto");
-  });
+    const setting = document.createElement("section");
+    setting.id = "themeSetting";
+    setting.className = "theme-setting";
+    setting.innerHTML = `
+      <h3>Admin appearance</h3>
+      <p>Choose how the admin dashboard should look.</p>
+      <div class="theme-options" role="group" aria-label="Admin appearance">
+        <button type="button" class="theme-option" data-theme-option="light" aria-pressed="false">☀️ Light</button>
+        <button type="button" class="theme-option" data-theme-option="dark" aria-pressed="false">🌙 Dark</button>
+        <button type="button" class="theme-option" data-theme-option="auto" aria-pressed="false">🖥 Auto</button>
+      </div>
+    `;
 
-  const observer = new MutationObserver(() => {
+    form.insertAdjacentElement("afterend", setting);
+
+    setting.querySelectorAll("[data-theme-option]").forEach(button => {
+      button.addEventListener("click", () => saveTheme(button.dataset.themeOption));
+    });
+
+    updateThemeButtons();
+  }
+
+  function initialize() {
+    installStyles();
+    applyTheme();
     addThemeSetting();
     updateThemeButtons();
-  });
 
-  observer.observe(document.body, { childList: true, subtree: true });
-  addThemeSetting();
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener?.("change", () => {
+      if (getStoredTheme() === "auto") applyTheme("auto");
+    });
+
+    const observer = new MutationObserver(() => {
+      addThemeSetting();
+      updateThemeButtons();
+    });
+
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialize, { once: true });
+  } else {
+    initialize();
+  }
 })();
