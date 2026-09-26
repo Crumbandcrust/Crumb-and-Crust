@@ -1082,6 +1082,48 @@ function startAdminDashboard() {
           }
 
         </div>
+
+        <div class="panel completed-orders-panel">
+
+          <div class="panel-header">
+
+            <div>
+              <p class="eyebrow">
+                Order history
+              </p>
+
+              <h2>
+                Completed orders
+              </h2>
+
+              <p class="order-count">
+                ${completedOrders.length}
+                ${
+                  completedOrders.length === 1
+                    ? "completed order"
+                    : "completed orders"
+                }
+              </p>
+            </div>
+
+          </div>
+
+          ${
+            completedOrders.length
+              ? `
+                <div class="modern-orders-grid">
+                  ${completedOrders
+                    .map(renderOrderCard)
+                    .join("")}
+                </div>
+              `
+              : createEmptyState(
+                  "No completed orders yet",
+                  "Orders marked Completed will appear here."
+                )
+          }
+
+        </div>
       `;
 
 
