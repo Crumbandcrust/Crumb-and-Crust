@@ -71,6 +71,14 @@ function validateItems(items) {
   return { normalized, count };
 }
 
+exports.getWeekendCapacity = onCall({ region: "us-west1" }, async (request) => {
+  const key = weekendKey(request.data?.preferredDate);
+  if (!key) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
+  const snap = await db.collection("weeklyCapacity").doc(key).get();
+  const reserved = Number(snap.data()?.reservedLoaves || 0);
+  return { weekendKey: key, remaining: Math.max(0, MAX_WEEKEND_LOAVES - reserved), maxLoaves: MAX_WEEKEND_LOAVES };
+});
+
 exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
   const data = request.data || {};
   const preferredDate = String(data.preferredDate || "");
