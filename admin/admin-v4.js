@@ -11,8 +11,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  updateDoc,
-  runTransaction
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 import {
@@ -44,11 +43,6 @@ const state = {
   orders: [],
   products: [],
   coupons: [],
-
-  inventory: {
-    breadFlourGrams: 0,
-    apFlourGrams: 0
-  },
 
   vacation: {
     enabled: false,
@@ -148,8 +142,7 @@ function startAdminDashboard() {
         products: "Products",
         coupons: "Coupons",
         analytics: "Analytics",
-        settings: "Settings",
-        inventory: "Inventory"
+        settings: "Settings"
       };
 
       return titles[state.activePage] || "Dashboard";
@@ -777,7 +770,6 @@ function startAdminDashboard() {
                 ${createNavButton("orders", "Orders", "▤")}
                 ${createNavButton("orderHistory", "Order History", "◷")}
                 ${createNavButton("products", "Products", "◇")}
-                ${createNavButton("inventory", "Inventory", "▣")}
                 ${createNavButton("coupons", "Coupons", "%")}
                 ${createNavButton("analytics", "Analytics", "↗")}
               </div>
@@ -908,10 +900,6 @@ function startAdminDashboard() {
 
         case "products":
           renderProducts(container);
-          break;
-
-        case "inventory":
-          renderInventory(container);
           break;
 
         case "coupons":
@@ -1157,7 +1145,50 @@ function startAdminDashboard() {
         .querySelectorAll("[data-order-status]")
         .forEach(select => {
 
-          select.addEventListener("change", async () => {\n            await updateOrderStatus(select.dataset.orderStatus, select.value);\n          });
+          select.addEventListener(
+            "change",
+            async () => {
+              const orderId = select.dataset.orderStatus;
+              const nextStatus = select.value;
+              const order = state.orders.find(
+                item => item.id === orderId
+              );
+              const previousStatus = order?.status;
+
+              // Update the local source of truth first. This makes a completed
+              // order leave the active Orders view immediately, independent of
+              // Firestore/network timing.
+              if (order) {
+                order.status = nextStatus;
+              }
+
+              renderApp();
+
+              try {
+                await updateDoc(
+                  doc(db, "orders", orderId),
+                  {
+                    status: nextStatus,
+                    updatedAt: serverTimestamp()
+                  }
+                );
+
+                showToast("Order status updated.");
+              } catch (error) {
+                // Restore the order if Firestore rejected the change.
+                if (order) {
+                  order.status = previousStatus;
+                }
+
+                renderApp();
+
+                reportError(
+                  "Could not update the order.",
+                  error
+                );
+              }
+            }
+          );
         });
 
 
@@ -1224,7 +1255,22 @@ function startAdminDashboard() {
       `;
 
       document.querySelectorAll("[data-order-status]").forEach(select => {
-        select.addEventListener("change", async () => {\n          await updateOrderStatus(select.dataset.orderStatus, select.value);\n        });
+        select.addEventListener("change", async () => {
+          const orderId = select.dataset.orderStatus;
+          const nextStatus = select.value;
+          const order = state.orders.find(item => item.id === orderId);
+          const previousStatus = order?.status;
+          if (order) order.status = nextStatus;
+          renderApp();
+          try {
+            await updateDoc(doc(db, "orders", orderId), { status: nextStatus, updatedAt: serverTimestamp() });
+            showToast("Order status updated.");
+          } catch (error) {
+            if (order) order.status = previousStatus;
+            renderApp();
+            reportError("Could not update the order.", error);
+          }
+        });
       });
 
       document.querySelectorAll("[data-delete-order]").forEach(button => {
@@ -1377,113 +1423,6 @@ function startAdminDashboard() {
         );
     }
 
-
-    /*
-    ==========================================================
-    INVENTORY
-    ==========================================================
-    */
-
-    function getOrderFlourUsage(order) {
-      const usage = { breadFlourGrams: 0, apFlourGrams: 0 };
-      if (Array.isArray(order.items) && order.items.length) {
-        order.items.forEach(item => {
-          const name = String(item?.name || "").toLowerCase();
-          const quantity = Math.max(0, Number(item?.quantity) || 0);
-          if (name.includes("focaccia")) usage.apFlourGrams += quantity * 575;
-          else if (name.includes("sourdough")) usage.breadFlourGrams += quantity * 500;
-        });
-        return usage;
-      }
-      const summary = String(order.item || order.itemsSummary || "").toLowerCase();
-      if (!summary) return usage;
-      const match = summary.match(/^(\\d+)\\s*[×x]?\\s*(.*)$/);
-      const quantity = match ? Math.max(1, Number(match[1]) || 1) : 1;
-      const name = match ? match[2] : summary;
-      if (name.includes("focaccia")) usage.apFlourGrams = quantity * 575;
-      else if (name.includes("sourdough")) usage.breadFlourGrams = quantity * 500;
-      return usage;
-    }
-
-    function formatGrams(value) {
-      return Math.max(0, Number(value) || 0).toLocaleString("en-US") + " g";
-    }
-
-    function renderInventory(container) {
-      const bread = Math.max(0, Number(state.inventory.breadFlourGrams) || 0);
-      const ap = Math.max(0, Number(state.inventory.apFlourGrams) || 0);
-      container.innerHTML =
-        '<div class="panel inventory-panel">' +
-          '<div class="panel-header"><div><p class="eyebrow">Ingredient tracking</p><h2>Flour inventory</h2><p class="order-count">Enter what you currently have. Inventory is deducted when an order is marked Ready.</p></div></div>' +
-          '<div class="inventory-grid">' +
-            '<article class="inventory-card"><div class="inventory-card-heading"><div><span class="inventory-label">Bread flour</span><strong>' + formatGrams(bread) + '</strong></div><span class="inventory-icon">🍞</span></div><p>Sourdough uses 500 g per loaf.</p></article>' +
-            '<article class="inventory-card"><div class="inventory-card-heading"><div><span class="inventory-label">AP flour</span><strong>' + formatGrams(ap) + '</strong></div><span class="inventory-icon">🌾</span></div><p>Focaccia uses 575 g per focaccia, including small focaccias.</p></article>' +
-          '</div>' +
-          '<form class="admin-form inventory-form" id="inventoryForm">' +
-            '<label>Bread flour on hand (grams)<input name="breadFlourGrams" type="number" min="0" step="1" value="' + bread + '" required></label>' +
-            '<label>AP flour on hand (grams)<input name="apFlourGrams" type="number" min="0" step="1" value="' + ap + '" required></label>' +
-            '<button class="primary-button" type="submit">Save inventory</button>' +
-          '</form>' +
-          '<div class="inventory-rules"><strong>Automatic usage</strong><span>500 g bread flour per sourdough loaf · 575 g AP flour per focaccia recipe</span></div>' +
-        '</div>';
-
-      document.getElementById("inventoryForm")?.addEventListener("submit", async event => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const breadFlourGrams = Math.max(0, Number(formData.get("breadFlourGrams")) || 0);
-        const apFlourGrams = Math.max(0, Number(formData.get("apFlourGrams")) || 0);
-        try {
-          await setDoc(doc(db, "settings", "store"), { inventory: { breadFlourGrams, apFlourGrams }, updatedAt: serverTimestamp() }, { merge: true });
-          showToast("Inventory saved.");
-        } catch (error) { reportError("Could not save inventory.", error); }
-      });
-    }
-
-    async function updateOrderStatus(orderId, nextStatus) {
-      const order = state.orders.find(item => item.id === orderId);
-      const previousStatus = order?.status;
-      if (!order) return;
-      if (normalizeOrderStatus(previousStatus) === "ready" || normalizeOrderStatus(nextStatus) !== "ready" || order.flourDeducted === true) {
-        order.status = nextStatus;
-        renderApp();
-        try {
-          await updateDoc(doc(db, "orders", orderId), { status: nextStatus, updatedAt: serverTimestamp() });
-          showToast("Order status updated.");
-        } catch (error) { order.status = previousStatus; renderApp(); reportError("Could not update the order.", error); }
-        return;
-      }
-
-      const usage = getOrderFlourUsage(order);
-      const breadUsed = usage.breadFlourGrams;
-      const apUsed = usage.apFlourGrams;
-      try {
-        await runTransaction(db, async transaction => {
-          const storeRef = doc(db, "settings", "store");
-          const orderRef = doc(db, "orders", orderId);
-          const storeSnapshot = await transaction.get(storeRef);
-          const orderSnapshot = await transaction.get(orderRef);
-          if (!orderSnapshot.exists()) throw new Error("Order no longer exists.");
-          const liveOrder = orderSnapshot.data() || {};
-          if (liveOrder.flourDeducted === true) return;
-          const inventory = storeSnapshot.exists() ? (storeSnapshot.data().inventory || {}) : {};
-          const currentBread = Math.max(0, Number(inventory.breadFlourGrams) || 0);
-          const currentAp = Math.max(0, Number(inventory.apFlourGrams) || 0);
-          if (currentBread < breadUsed || currentAp < apUsed) {
-            const shortage = [];
-            if (currentBread < breadUsed) shortage.push("bread flour needs " + formatGrams(breadUsed) + " but only " + formatGrams(currentBread) + " is on hand");
-            if (currentAp < apUsed) shortage.push("AP flour needs " + formatGrams(apUsed) + " but only " + formatGrams(currentAp) + " is on hand");
-            throw new Error("Not enough flour: " + shortage.join("; ") + ".");
-          }
-          transaction.set(storeRef, { inventory: { breadFlourGrams: currentBread - breadUsed, apFlourGrams: currentAp - apUsed }, updatedAt: serverTimestamp() }, { merge: true });
-          transaction.update(orderRef, { status: "Ready", flourDeducted: true, flourUsed: { breadFlourGrams: breadUsed, apFlourGrams: apUsed }, flourDeductedAt: serverTimestamp(), updatedAt: serverTimestamp() });
-        });
-        order.status = "Ready";
-        order.flourDeducted = true;
-        order.flourUsed = { breadFlourGrams: breadUsed, apFlourGrams: apUsed };
-        renderApp();
-        showToast("Order marked Ready. Used " + formatGrams(breadUsed) + " bread flour and " + formatGrams(apUsed) + " AP flour.");
-      } catch (error) { renderApp(); reportError(error.message || "Could not mark the order Ready.", error); }
-    }
 
     /*
     ==========================================================
@@ -2497,11 +2436,6 @@ function startAdminDashboard() {
               ...state.settings,
               ...(data.business || {})
             };
-
-            state.inventory = {
-              ...state.inventory,
-              ...(data.inventory || {})
-            };
           }
 
           renderApp();
@@ -2828,90 +2762,6 @@ function installOrderStyles() {
 
       .order-time-value {
         font-size: 1.2rem;
-      }
-    }
-
-    .inventory-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-      margin: 22px 0;
-    }
-
-    .inventory-card {
-      background: #fffaf5;
-      border: 1px solid #e9e0d7;
-      border-radius: 16px;
-      padding: 20px;
-    }
-
-    .inventory-card-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-    }
-
-    .inventory-label {
-      display: block;
-      color: #776e67;
-      font-size: .78rem;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      margin-bottom: 7px;
-    }
-
-    .inventory-card strong {
-      display: block;
-      font-size: 2rem;
-      color: #2c2119;
-    }
-
-    .inventory-card p {
-      margin: 12px 0 0;
-      color: #776e67;
-      line-height: 1.5;
-    }
-
-    .inventory-icon {
-      font-size: 1.8rem;
-    }
-
-    .inventory-form {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      align-items: end;
-      border-top: 1px solid #eee8e2;
-      padding-top: 20px;
-    }
-
-    .inventory-form button {
-      grid-column: 1 / -1;
-      justify-self: start;
-    }
-
-    .inventory-rules {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-top: 18px;
-      padding: 14px 16px;
-      border-radius: 12px;
-      background: #f8f5f0;
-      color: #6e665f;
-      line-height: 1.5;
-    }
-
-    .inventory-rules strong {
-      color: #3b3028;
-    }
-
-    @media (max-width: 720px) {
-      .inventory-grid,
-      .inventory-form {
-        grid-template-columns: 1fr;
       }
     }
   `;
