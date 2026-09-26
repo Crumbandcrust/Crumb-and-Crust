@@ -1145,8 +1145,12 @@ function wireSubmit(form) {
           error
         );
 
+        const serverMessage =
+          error?.details ||
+          error?.message ||
+          "Something went wrong sending your order.";
         showFormMessage(
-          "Something went wrong sending your order. Please try again, or email crumbandcrustca@gmail.com.",
+          serverMessage + " Please choose another date or try again.",
           "error"
         );
       } finally {
