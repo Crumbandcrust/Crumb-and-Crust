@@ -1018,8 +1018,17 @@ function startAdminDashboard() {
           String(order.status || "").toLowerCase() !== "completed"
       );
 
+      const completedOrders = state.orders.filter(
+        order =>
+          String(order.status || "").trim().toLowerCase() === "completed"
+      );
+
       container.innerHTML = `
         <div class="panel">
+
+          <p style="margin:0 0 16px;font-weight:700;">
+            Admin v3 · ${state.orders.length} loaded · ${activeOrders.length} active · ${completedOrders.length} completed
+          </p>
 
           <div class="panel-header">
 
