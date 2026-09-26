@@ -43,6 +43,7 @@ const state = {
   orders: [],
   products: [],
   coupons: [],
+  inventory: { breadFlourGrams: 0, apFlourGrams: 0 },
 
   vacation: {
     enabled: false,
@@ -143,7 +144,9 @@ function startAdminDashboard() {
         coupons: "Coupons",
         analytics: "Analytics",
         settings: "Settings",
-        inventory: "Inventory"
+        inventory: "Inventory",
+        today: "Today",
+        customers: "Customers"
       };
 
       return titles[state.activePage] || "Dashboard";
@@ -773,6 +776,8 @@ function startAdminDashboard() {
                 ${createNavButton("products", "Products", "◇")}
                 ${createNavButton("coupons", "Coupons", "%")}
                 ${createNavButton("analytics", "Analytics", "↗")}
+                ${createNavButton("today", "Today", "☀")}
+                ${createNavButton("customers", "Customers", "♙")}
                 ${createNavButton("inventory", "Inventory", "▥")}
               </div>
 
@@ -914,6 +919,14 @@ function startAdminDashboard() {
 
         case "settings":
           renderSettings(container);
+          break;
+
+        case "today":
+          renderToday(container);
+          break;
+
+        case "customers":
+          renderCustomers(container);
           break;
 
         case "inventory":
@@ -2208,43 +2221,92 @@ function startAdminDashboard() {
     ==========================================================
     */
 
-    function renderInventory(container) {
-      container.innerHTML = '<div class="panel narrow-panel">' +
-        '<div class="panel-header"><div><p class="eyebrow">Inventory</p><h2>Flour inventory</h2></div></div>' +
-        '<p style="margin-top:0;color:#756d66;">Enter the amount of flour you currently have. Amounts are saved in grams.</p>' +
-        '<form class="admin-form" id="inventoryForm">' +
-          '<label>Bread flour (grams)<input name="breadFlour" type="number" min="0" step="1" required value="0"></label>' +
-          '<label>AP flour (grams)<input name="apFlour" type="number" min="0" step="1" required value="0"></label>' +
-          '<button class="primary-button" type="submit">Save inventory</button>' +
-        '</form></div>' +
-        '<div class="dashboard-cards" style="margin-top:24px;">' +
-          '<article class="dashboard-card"><p class="card-label">Sourdough uses</p><strong>500 g</strong><span>Per sourdough item</span></article>' +
-          '<article class="dashboard-card"><p class="card-label">Focaccia uses</p><strong>575 g</strong><span>Per focaccia, including small focaccia</span></article>' +
-        '</div>';
 
-      document.getElementById("inventoryForm")?.addEventListener("submit", async event => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        try {
-          await setDoc(doc(db, "settings", "store"), {
-            inventory: {
-              breadFlourGrams: Math.max(0, Number(formData.get("breadFlour")) || 0),
-              apFlourGrams: Math.max(0, Number(formData.get("apFlour")) || 0)
-            },
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-          showToast("Inventory saved.");
-        } catch (error) {
-          reportError("Could not save inventory.", error);
-        }
-      });
+
+    function getOrderItemsCount(order) {
+      if (Array.isArray(order.items)) return order.items.reduce((sum,item)=>sum+(Number(item.quantity)||0),0);
+      return Number(order.itemCount)||0;
     }
 
-    /*
-    ==========================================================
-    SETTINGS
-    ==========================================================
-    */
+    function getFlourForOrder(order) {
+      if (!Array.isArray(order.items)) return 0;
+      return order.items.reduce((sum,item)=>{
+        const name=String(item.name||"").toLowerCase();
+        const qty=Number(item.quantity)||0;
+        if(name.includes("focaccia")) return sum+575*qty;
+        if(name.includes("sourdough")) return sum+500*qty;
+        return sum;
+      },0);
+    }
+
+    function renderToday(container) {
+      const todayKey=new Date().toISOString().slice(0,10);
+      const orders=state.orders.filter(order=>String(getRequestedDate(order)).slice(0,10)===todayKey && normalizeOrderStatus(order.status)!=="cancelled");
+      const production=orders.filter(order=>normalizeOrderStatus(order.status)!=="completed");
+      const sourdough=production.reduce((s,o)=>s+(o.items||[]).filter(i=>String(i.name||"").toLowerCase().includes("sourdough")).reduce((n,i)=>n+(Number(i.quantity)||0),0),0);
+      const focaccia=production.reduce((s,o)=>s+(o.items||[]).filter(i=>String(i.name||"").toLowerCase().includes("focaccia")).reduce((n,i)=>n+(Number(i.quantity)||0),0),0);
+      const flour=production.reduce((s,o)=>s+getFlourForOrder(o),0);
+      const stock=(Number(state.inventory.breadFlourGrams)||0)+(Number(state.inventory.apFlourGrams)||0);
+      container.innerHTML='<div class="dashboard-cards">'+
+        '<article class="dashboard-card"><p class="card-label">Orders today</p><strong>'+orders.length+'</strong><span>Pickup and delivery</span></article>'+
+        '<article class="dashboard-card"><p class="card-label">Sourdough</p><strong>'+sourdough+'</strong><span>Loaves to make</span></article>'+
+        '<article class="dashboard-card"><p class="card-label">Focaccia</p><strong>'+focaccia+'</strong><span>Recipes to make</span></article>'+
+        '<article class="dashboard-card"><p class="card-label">Flour needed</p><strong>'+flour.toLocaleString()+' g</strong><span>'+stock.toLocaleString()+' g currently in inventory</span></article></div>'+\
+        '<div class="panel"><div class="panel-header"><div><p class="eyebrow">Production</p><h2>Today\'s orders</h2></div></div>'+ (orders.length?'<div class="modern-orders-grid">'+orders.map(renderOrderCard).join('')+'</div>':createEmptyState("Nothing scheduled today","Orders for today will appear here."))+'</div>';
+      document.querySelectorAll("[data-order-status]").forEach(select=>select.addEventListener("change",handleOrderStatusChange));
+    }
+
+    function renderCustomers(container) {
+      const map=new Map();
+      state.orders.forEach(order=>{
+        const email=getCustomerEmail(order).trim().toLowerCase();
+        const name=getCustomerName(order).trim()||"Customer";
+        const key=email||name.toLowerCase(); if(!key)return;
+        const current=map.get(key)||{name,email,phone:getCustomerPhone(order),orders:0,spent:0,lastOrder:""};
+        current.orders++; current.spent+=Number(order.total)||0;
+        const date=String(getRequestedDate(order)||""); if(date>current.lastOrder)current.lastOrder=date;
+        map.set(key,current);
+      });
+      const customers=Array.from(map.values()).sort((a,b)=>b.spent-a.spent);
+      container.innerHTML='<div class="panel"><div class="panel-header"><div><p class="eyebrow">Customer database</p><h2>Customers</h2><p class="order-count">'+customers.length+' '+(customers.length===1?'customer':'customers')+'</p></div></div>'+(customers.length?'<div class="product-grid">'+customers.map(customer=>'<article class="product-card"><div><span class="status-badge status-completed">'+customer.orders+' '+(customer.orders===1?'order':'orders')+'</span><h3>'+escapeHtml(customer.name)+'</h3><p>'+escapeHtml(customer.email||customer.phone||'No contact information')+'</p><strong>'+formatMoney(customer.spent)+'</strong><p>Last order: '+escapeHtml(customer.lastOrder||'Not provided')+'</p></div></article>').join('')+'</div>':createEmptyState('No customers yet','Customers will appear here after their first order.'))+'</div>';
+    }
+
+    async function handleOrderStatusChange(event) {
+      const select=event.currentTarget; const orderId=select.dataset.orderStatus; const nextStatus=select.value;
+      const order=state.orders.find(item=>item.id===orderId); const previousStatus=order?.status; if(order)order.status=nextStatus; renderApp();
+      try {
+        const patch={status:nextStatus,updatedAt:serverTimestamp()};
+        if(nextStatus==="Ready" && !order?.inventoryDeducted){
+          const flourUsed=getFlourForOrder(order||{});
+          if(flourUsed>0){
+            const bread=Number(state.inventory.breadFlourGrams)||0; const ap=Number(state.inventory.apFlourGrams)||0; let remaining=flourUsed;
+            const apUsed=Math.min(ap,remaining); remaining-=apUsed; const breadUsed=Math.min(bread,remaining); remaining-=breadUsed;
+            if(remaining>0) throw new Error("Not enough flour in inventory to mark this order Ready.");
+            await setDoc(doc(db,"settings","store"),{inventory:{breadFlourGrams:bread-breadUsed,apFlourGrams:ap-apUsed}},{merge:true});
+            patch.inventoryDeducted=true; patch.flourUsedGrams=flourUsed;
+          }
+        }
+        await updateDoc(doc(db,"orders",orderId),patch); showToast("Order status updated.");
+      } catch(error){if(order)order.status=previousStatus;renderApp();reportError(error.message||"Could not update the order.",error);}
+    }
+
+    function renderInventory(container) {
+      const bread=Number(state.inventory.breadFlourGrams)||0; const ap=Number(state.inventory.apFlourGrams)||0; const total=bread+ap;
+      const open=state.orders.filter(order=>!['cancelled','completed'].includes(normalizeOrderStatus(order.status)));
+      const needed=open.reduce((sum,order)=>sum+getFlourForOrder(order),0); const projected=total-needed;
+      container.innerHTML='<div class="dashboard-cards">'+
+        '<article class="dashboard-card"><p class="card-label">Bread flour</p><strong>'+bread.toLocaleString()+' g</strong><span>Current stock</span></article>'+
+        '<article class="dashboard-card"><p class="card-label">AP flour</p><strong>'+ap.toLocaleString()+' g</strong><span>Current stock</span></article>'+
+        '<article class="dashboard-card"><p class="card-label">Open-order need</p><strong>'+needed.toLocaleString()+' g</strong><span>500 g sourdough · 575 g focaccia</span></article>'+
+        '<article class="dashboard-card"><p class="card-label">Projected remaining</p><strong>'+Math.max(0,projected).toLocaleString()+' g</strong><span>'+(projected<0?'⚠️ More flour needed':'Enough for current orders')+'</span></article></div>'+
+        '<div class="panel narrow-panel"><div class="panel-header"><div><p class="eyebrow">Inventory</p><h2>Flour inventory</h2></div></div><form class="admin-form" id="inventoryForm">'+
+        '<label>Bread flour (grams)<input name="breadFlour" type="number" min="0" step="1" required value="'+bread+'"></label>'+\
+        '<label>AP flour (grams)<input name="apFlour" type="number" min="0" step="1" required value="'+ap+'"></label>'+\
+        '<button class="primary-button" type="submit">Save inventory</button></form></div>'+\
+        '<div class="panel"><div class="panel-header"><div><p class="eyebrow">Shopping list</p><h2>What you need to buy</h2></div></div>'+\
+        (projected<0?'<p><strong>Flour:</strong> '+Math.abs(projected).toLocaleString()+' g more needed for current open orders.</p>':'<p>Nothing extra needed for the current open orders.</p>')+'</div>';
+      document.getElementById("inventoryForm")?.addEventListener("submit",async event=>{event.preventDefault();const formData=new FormData(event.currentTarget);try{await setDoc(doc(db,"settings","store"),{inventory:{breadFlourGrams:Math.max(0,Number(formData.get("breadFlour"))||0),apFlourGrams:Math.max(0,Number(formData.get("apFlour"))||0)},updatedAt:serverTimestamp()},{merge:true});showToast("Inventory saved.");}catch(error){reportError("Could not save inventory.",error);}});
+    }
 
     function renderSettings(container) {
       container.innerHTML = `
@@ -2479,6 +2541,10 @@ function startAdminDashboard() {
             state.settings = {
               ...state.settings,
               ...(data.business || {})
+            };
+            state.inventory = {
+              ...state.inventory,
+              ...(data.inventory || {})
             };
           }
 
