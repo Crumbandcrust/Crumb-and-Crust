@@ -143,14 +143,15 @@ function startAdminDashboard() {
     }
 
 
-    function createNavButton(page, label) {
+    function createNavButton(page, label, icon) {
       return `
         <button
           class="nav-button ${state.activePage === page ? "active" : ""}"
           data-page="${page}"
           type="button"
         >
-          ${label}
+          <span class="nav-icon" aria-hidden="true">${icon}</span>
+          <span class="nav-label">${label}</span>
         </button>
       `;
     }
@@ -751,19 +752,26 @@ function startAdminDashboard() {
 
               <div>
                 <h2>${escapeHtml(state.settings.bakeryName)}</h2>
-                <p>Admin Panel</p>
+                <p>Admin workspace</p>
               </div>
             </div>
 
 
             <nav class="sidebar-nav" aria-label="Admin navigation">
-              ${createNavButton("dashboard", "Dashboard")}
-              ${createNavButton("orders", "Orders")}
-              ${createNavButton("vacation", "Vacation Mode")}
-              ${createNavButton("products", "Products")}
-              ${createNavButton("coupons", "Coupons")}
-              ${createNavButton("analytics", "Analytics")}
-              ${createNavButton("settings", "Settings")}
+              <div class="nav-group">
+                <p class="nav-group-label">Manage</p>
+                ${createNavButton("dashboard", "Dashboard", "⌂")}
+                ${createNavButton("orders", "Orders", "▤")}
+                ${createNavButton("products", "Products", "◇")}
+                ${createNavButton("coupons", "Coupons", "%")}
+                ${createNavButton("analytics", "Analytics", "↗")}
+              </div>
+
+              <div class="nav-group">
+                <p class="nav-group-label">Store</p>
+                ${createNavButton("vacation", "Vacation Mode", "◷")}
+                ${createNavButton("settings", "Settings", "⚙")}
+              </div>
             </nav>
 
 
@@ -771,7 +779,7 @@ function startAdminDashboard() {
 
               <div>
                 <span class="status-dot"></span>
-                <span>Connected to Firebase</span>
+                <span>Live · Firebase connected</span>
               </div>
 
               <button
@@ -831,9 +839,17 @@ function startAdminDashboard() {
       document
         .getElementById("mobileMenuButton")
         ?.addEventListener("click", () => {
-          document
-            .querySelector(".sidebar")
-            ?.classList.toggle("open");
+          document.querySelector(".sidebar")?.classList.toggle("open");
+          document.querySelector(".mobile-menu-button")?.classList.toggle("active");
+        });
+
+      document
+        .querySelectorAll(".sidebar [data-page]")
+        .forEach(button => {
+          button.addEventListener("click", () => {
+            document.querySelector(".sidebar")?.classList.remove("open");
+            document.querySelector(".mobile-menu-button")?.classList.remove("active");
+          });
         });
 
 
