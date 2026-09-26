@@ -506,78 +506,65 @@ function formatReopeningDate(value) {
    Pickup dates
    ========================================================================== */
 
+function getPacificDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, Number(part.value)]));
+  return { year: values.year, month: values.month, day: values.day };
+}
+
+function dateOnlyFromParts(parts) {
+  return new Date(parts.year, parts.month - 1, parts.day);
+}
+
+function formatDateInput(date) {
+  return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+}
+
+function isOrderDateEligible(date) {
+  const today = dateOnlyFromParts(getPacificDateParts());
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  const hoursUntilPickup = (target.getTime() - today.getTime()) / 3600000;
+  return hoursUntilPickup >= 72 && hoursUntilPickup <= 21 * 24;
+}
+
+function renderOrderingWindowWarning() {
+  const banner = document.getElementById("orderStatus");
+  if (!banner || storeClosed) return;
+  const today = dateOnlyFromParts(getPacificDateParts());
+  const daysUntilSaturday = ((6 - today.getDay() + 7) % 7) || 7;
+  const upcomingSaturday = new Date(today);
+  upcomingSaturday.setDate(upcomingSaturday.getDate() + daysUntilSaturday);
+  const upcomingSunday = new Date(upcomingSaturday);
+  upcomingSunday.setDate(upcomingSunday.getDate() + 1);
+  if (!isOrderDateEligible(upcomingSaturday) && !isOrderDateEligible(upcomingSunday)) {
+    banner.className = "status-banner open";
+    banner.textContent = "Heads up: this weekend is too soon to order. Orders require at least 72 hours’ notice. You can still order for a future weekend.";
+  }
+}
+
 function populatePickupDates() {
-  const select =
-    document.getElementById(
-      "pickupDate"
-    );
-
-  if (!select) {
-    return;
-  }
-
+  const select = document.getElementById("pickupDate");
+  if (!select) return;
   const availableDates = [];
-
-  const cursor =
-    new Date();
-
-  cursor.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
-  while (
-    availableDates.length < 6
-  ) {
-    cursor.setDate(
-      cursor.getDate() + 1
-    );
-
-    const dayOfWeek =
-      cursor.getDay();
-
-    if (
-      dayOfWeek === 6 ||
-      dayOfWeek === 0
-    ) {
-      availableDates.push(
-        new Date(cursor)
-      );
-    }
+  const cursor = dateOnlyFromParts(getPacificDateParts());
+  const latestDate = new Date(cursor);
+  latestDate.setDate(latestDate.getDate() + 21);
+  while (cursor <= latestDate) {
+    const dayOfWeek = cursor.getDay();
+    if ((dayOfWeek === 6 || dayOfWeek === 0) && isOrderDateEligible(cursor)) availableDates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
   }
-
-  select.innerHTML =
-    '<option value="" disabled selected>' +
-    "Choose a Saturday or Sunday" +
-    "</option>";
-
+  select.innerHTML = '<option value="" disabled selected>Choose a Saturday or Sunday</option>';
   availableDates.forEach(date => {
-    const option =
-      document.createElement(
-        "option"
-      );
-
-    option.value =
-      date
-        .toISOString()
-        .slice(0, 10);
-
-    option.textContent =
-      date.toLocaleDateString(
-        "en-US",
-        {
-          weekday: "long",
-          month: "long",
-          day: "numeric"
-        }
-      );
-
-    select.appendChild(
-      option
-    );
+    const option = document.createElement("option");
+    option.value = formatDateInput(date);
+    option.textContent = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    select.appendChild(option);
   });
+  renderOrderingWindowWarning();
 }
 
 /* ==========================================================================
