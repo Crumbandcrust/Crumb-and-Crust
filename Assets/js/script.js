@@ -179,6 +179,7 @@ const DELIVERY_FEE = 4;
 const MAX_WEEKEND_LOAVES = 8;
 let weekendCapacity = { key: "", remaining: MAX_WEEKEND_LOAVES };
 let capacityUnsubscribe = null;
+let storeClosed = false;
 
 /* ==========================================================================
    Firebase configuration
@@ -356,6 +357,8 @@ function renderStatusBanner(
     vacationEnabled ||
     manuallyClosed;
 
+  storeClosed = orderingClosed;
+
   if (orderingClosed) {
     banner.className =
       "status-banner closed";
@@ -451,6 +454,7 @@ async function wireWeekendCapacity() {
 }
 
 function renderCapacityMessage() {
+  if (storeClosed) return;
   const banner = document.getElementById("orderStatus");
   const select = document.getElementById("pickupDate");
   if (!banner || !select || !select.value) return;
@@ -746,6 +750,8 @@ function getCurrentItemTotal() {
 function refreshItemLimits() {
   const totalItems =
     getCurrentItemTotal();
+  const availableForWeekend = Math.max(0, Number(weekendCapacity.remaining));
+  const itemLimit = Math.min(MAX_ITEMS_PER_ORDER, availableForWeekend || MAX_ITEMS_PER_ORDER);
 
   const counter =
     document.getElementById(
@@ -753,8 +759,6 @@ function refreshItemLimits() {
     );
 
   if (counter) {
-    const availableForWeekend = Math.max(0, Number(weekendCapacity.remaining));
-    const itemLimit = Math.min(MAX_ITEMS_PER_ORDER, availableForWeekend || MAX_ITEMS_PER_ORDER);
     counter.textContent = availableForWeekend && availableForWeekend <= 2
       ? `${totalItems} of ${MAX_ITEMS_PER_ORDER} selected · ${availableForWeekend} remaining`
       : `${totalItems} of ${MAX_ITEMS_PER_ORDER} selected`;
