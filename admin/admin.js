@@ -2050,63 +2050,24 @@ function startAdminDashboard() {
     */
 
     function renderAnalytics(container) {
-      const completed =
-        state.orders.filter(
-          order =>
-            order.status === "Completed"
-        ).length;
-
-      const cancelled =
-        state.orders.filter(
-          order =>
-            order.status === "Cancelled"
-        ).length;
-
-      const revenue =
-        state.orders
-          .filter(
-            order =>
-              order.status !== "Cancelled"
-          )
-          .reduce(
-            (total, order) =>
-              total +
-              Number(order.total || 0),
-            0
-          );
-
-
-      container.innerHTML = `
-        <div class="dashboard-cards">
-
-          <article class="dashboard-card">
-            <p class="card-label">Revenue</p>
-            <strong>${formatMoney(revenue)}</strong>
-            <span>Excludes cancelled orders</span>
-          </article>
-
-          <article class="dashboard-card">
-            <p class="card-label">Total orders</p>
-            <strong>${state.orders.length}</strong>
-            <span>Firestore orders</span>
-          </article>
-
-          <article class="dashboard-card">
-            <p class="card-label">Completed</p>
-            <strong>${completed}</strong>
-            <span>Finished orders</span>
-          </article>
-
-          <article class="dashboard-card">
-            <p class="card-label">Cancelled</p>
-            <strong>${cancelled}</strong>
-            <span>Cancelled orders</span>
-          </article>
-
-        </div>
-      `;
+      const completed = state.orders.filter(order => order.status === "Completed");
+      const cancelled = state.orders.filter(order => order.status === "Cancelled");
+      const revenue = completed.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const average = completed.length ? revenue / completed.length : 0;
+      const statusNames = ["New", "Preparing", "Ready", "Completed", "Cancelled"];
+      container.innerHTML = "<div class=\"dashboard-cards\">"
+        + "<article class=\"dashboard-card\"><p class=\"card-label\">Completed revenue</p><strong>" + formatMoney(revenue) + "</strong><span>Completed orders only</span></article>"
+        + "<article class=\"dashboard-card\"><p class=\"card-label\">Average order</p><strong>" + formatMoney(average) + "</strong><span>Across " + completed.length + " completed orders</span></article>"
+        + "<article class=\"dashboard-card\"><p class=\"card-label\">Completion rate</p><strong>" + (state.orders.length ? Math.round(completed.length / state.orders.length * 100) : 0) + "%</strong><span>" + cancelled.length + " cancelled</span></article>"
+        + "<article class=\"dashboard-card\"><p class=\"card-label\">Total orders</p><strong>" + state.orders.length + "</strong><span>All loaded orders</span></article></div>"
+        + "<div class=\"analytics-grid\"><section class=\"panel\"><div class=\"panel-header\"><div><p class=\"eyebrow\">Order pipeline</p><h2>Status breakdown</h2></div></div><div class=\"bar-list\">"
+        + statusNames.map(status => { const count = state.orders.filter(order => order.status === status).length; const pct = state.orders.length ? Math.round(count / state.orders.length * 100) : 0; return "<div class=\"bar-row\"><div><span>" + status + "</span><strong>" + count + "</strong></div><div class=\"bar-track\"><i style=\"width:" + pct + "%\"></i></div></div>"; }).join("")
+        + "</div></section><section class=\"panel\"><div class=\"panel-header\"><div><p class=\"eyebrow\">Store health</p><h2>At a glance</h2></div></div><div class=\"health-list\">"
+        + "<div><span>Available products</span><strong>" + state.products.filter(product => product.available).length + "</strong></div>"
+        + "<div><span>Unavailable products</span><strong>" + state.products.filter(product => !product.available).length + "</strong></div>"
+        + "<div><span>Active coupons</span><strong>" + state.coupons.filter(coupon => coupon.active).length + "</strong></div>"
+        + "<div><span>Ordering</span><strong>" + (state.vacation.enabled ? "Paused" : "Open") + "</strong></div></div></section></div>";
     }
-
 
     /*
     ==========================================================
