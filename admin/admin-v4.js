@@ -1160,56 +1160,7 @@ function startAdminDashboard() {
         );
 
 
-      document
-        .querySelectorAll("[data-order-status]")
-        .forEach(select => {
-
-          select.addEventListener(
-            "change",
-            async () => {
-              const orderId = select.dataset.orderStatus;
-              const nextStatus = select.value;
-              const order = state.orders.find(
-                item => item.id === orderId
-              );
-              const previousStatus = order?.status;
-
-              // Update the local source of truth first. This makes a completed
-              // order leave the active Orders view immediately, independent of
-              // Firestore/network timing.
-              if (order) {
-                order.status = nextStatus;
-              }
-
-              renderApp();
-
-              try {
-                await updateDoc(
-                  doc(db, "orders", orderId),
-                  {
-                    status: nextStatus,
-                    updatedAt: serverTimestamp()
-                  }
-                );
-
-                showToast("Order status updated.");
-              } catch (error) {
-                // Restore the order if Firestore rejected the change.
-                if (order) {
-                  order.status = previousStatus;
-                }
-
-                renderApp();
-
-                reportError(
-                  "Could not update the order.",
-                  error
-                );
-              }
-            }
-          );
-        });
-
+      document.querySelectorAll("[data-order-status]").forEach(select => select.addEventListener("change", handleOrderStatusChange));
 
       document
         .querySelectorAll("[data-delete-order]")
