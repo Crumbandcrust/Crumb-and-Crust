@@ -51,10 +51,10 @@ const MAX_WEEKEND_LOAVES = 8;
 const MIN_NOTICE_HOURS = 72;
 const MAX_ADVANCE_DAYS = 21;
 
-function pacificTodayKey() {
+function pacificNowParts() {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const values = Object.fromEntries(parts.filter(p => p.type !== "literal").map(p => [p.type, p.value]));
-  return values.year + "-" + values.month + "-" + values.day;
+  return { year: Number(values.year), month: Number(values.month), day: Number(values.day), hour: Number(values.hour || 0), minute: Number(values.minute || 0), second: Number(values.second || 0) };
 }
 
 function validatePreferredDate(preferredDate) {
@@ -65,7 +65,7 @@ function validatePreferredDate(preferredDate) {
   const today = new Date(todayYear, todayMonth - 1, todayDay);
   const dayOfWeek = target.getDay();
   if (dayOfWeek !== 0 && dayOfWeek !== 6) throw new HttpsError("invalid-argument", "Pickup and delivery are available Saturday and Sunday only.");
-  const diffHours = (target.getTime() - today.getTime()) / 3600000;
+  const nowPseudoUtc = Date.UTC(now.year, now.month - 1, now.day, now.hour, now.minute, now.second);\n  const targetPseudoUtc = Date.UTC(year, month - 1, day, 0, 0, 0);\n  const diffHours = (targetPseudoUtc - nowPseudoUtc) / 3600000;
   if (diffHours < MIN_NOTICE_HOURS) throw new HttpsError("failed-precondition", "That weekend is too soon to order. Orders require at least 72 hours' notice.");
   if (diffHours > MAX_ADVANCE_DAYS * 24) throw new HttpsError("failed-precondition", "Orders can be scheduled up to 21 days in advance.");
 }
