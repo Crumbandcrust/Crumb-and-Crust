@@ -506,15 +506,15 @@ function formatReopeningDate(value) {
    Pickup dates
    ========================================================================== */
 
-function getPacificDateParts(date = new Date()) {
+function getPacificDateTimeParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit"
   }).formatToParts(date);
   const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, Number(part.value)]));
-  return { year: values.year, month: values.month, day: values.day };
+  return { year: values.year, month: values.month, day: values.day, hour: values.hour || 0, minute: values.minute || 0, second: values.second || 0 };
 }
 
-function dateOnlyFromParts(parts) {
+function getPacificDateParts(date = new Date()) {\n  const parts = getPacificDateTimeParts(date);\n  return { year: parts.year, month: parts.month, day: parts.day };\n}\n\nfunction dateOnlyFromParts(parts) {
   return new Date(parts.year, parts.month - 1, parts.day);
 }
 
