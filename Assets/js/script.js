@@ -742,6 +742,7 @@ function getCurrentItemTotal() {
 function refreshItemLimits() {
   const totalItems =
     getCurrentItemTotal();
+  const categoryTotals = getCurrentCategoryTotals();
   const availableForWeekend = Math.max(0, Number(weekendCapacity.remaining));
   const itemLimit = Math.min(MAX_ITEMS_PER_ORDER, availableForWeekend || MAX_ITEMS_PER_ORDER);
 
