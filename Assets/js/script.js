@@ -174,7 +174,9 @@ const ORDER_SETTINGS = {
   limitedCapacityNote: true
 };
 
-const MAX_ITEMS_PER_ORDER = 4;
+const MAX_ITEMS_PER_ORDER = 6;
+const MAX_SOURDOUGH_PER_ORDER = 2;
+const MAX_BREAD_PER_ORDER = 4;
 const DELIVERY_FEE = 4;
 const MAX_WEEKEND_LOAVES = 8;
 let weekendCapacity = { key: "", remaining: MAX_WEEKEND_LOAVES };
@@ -716,25 +718,25 @@ function wireQuantitySteppers() {
   refreshItemLimits();
 }
 
-function getCurrentItemTotal() {
-  return Array.from(
-    document.querySelectorAll(
-      ".qty-input"
-    )
-  ).reduce(
-    (total, input) => {
-      return (
-        total +
-        (
-          Number.parseInt(
-            input.value,
-            10
-          ) || 0
-        )
-      );
+function isSourdoughItem(input) {
+  return /sourdough/i.test(String(input?.name || input?.dataset?.name || ""));
+}
+
+function getCurrentCategoryTotals() {
+  return Array.from(document.querySelectorAll(".qty-input")).reduce(
+    (totals, input) => {
+      const quantity = Number.parseInt(input.value, 10) || 0;
+      if (isSourdoughItem(input)) totals.sourdough += quantity;
+      else totals.bread += quantity;
+      return totals;
     },
-    0
+    { sourdough: 0, bread: 0 }
   );
+}
+
+function getCurrentItemTotal() {
+  const totals = getCurrentCategoryTotals();
+  return totals.sourdough + totals.bread;
 }
 
 function refreshItemLimits() {
@@ -801,8 +803,16 @@ function refreshItemLimits() {
         ) ||
         MAX_ITEMS_PER_ORDER;
 
+      const categoryMaximum = isSourdoughItem(input)
+        ? MAX_SOURDOUGH_PER_ORDER
+        : MAX_BREAD_PER_ORDER;
+      const categoryTotal = isSourdoughItem(input)
+        ? categoryTotals.sourdough
+        : categoryTotals.bread;
+
       increaseButton.disabled =
         quantity >= itemMaximum ||
+        categoryTotal >= categoryMaximum ||
         totalItems >= itemLimit ||
         (weekendCapacity.key && totalItems >= availableForWeekend);
 
@@ -965,15 +975,36 @@ function wireSubmit(form) {
         return;
       }
 
-      if (
-        totalItems >
-        MAX_ITEMS_PER_ORDER
-      ) {
+      const categoryTotals = items.reduce(
+        (totals, item) => {
+          if (/sourdough/i.test(String(item.name || ""))) totals.sourdough += item.quantity;
+          else totals.bread += item.quantity;
+          return totals;
+        },
+        { sourdough: 0, bread: 0 }
+      );
+
+      if (categoryTotals.sourdough > MAX_SOURDOUGH_PER_ORDER) {
         showFormMessage(
-          `Orders are limited to ${MAX_ITEMS_PER_ORDER} items at a time. Please adjust your quantities.`,
+          "You can order up to " + MAX_SOURDOUGH_PER_ORDER + " sourdough loaves per order.",
           "warning"
         );
+        return;
+      }
 
+      if (categoryTotals.bread > MAX_BREAD_PER_ORDER) {
+        showFormMessage(
+          "You can order up to " + MAX_BREAD_PER_ORDER + " bread items per order.",
+          "warning"
+        );
+        return;
+      }
+
+      if (totalItems > MAX_ITEMS_PER_ORDER) {
+        showFormMessage(
+          "Orders are limited to " + MAX_ITEMS_PER_ORDER + " items at a time.",
+          "warning"
+        );
         return;
       }
 
