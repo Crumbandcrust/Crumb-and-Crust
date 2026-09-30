@@ -455,6 +455,35 @@ async function wireWeekendCapacity() {
   select.addEventListener("change", refresh);
   updateCapacityRefresh = refresh;
   await refresh();
+
+  // If the earliest available weekend is already full, show that immediately
+  // without forcing the customer to select a date just to discover it.
+  const firstDateOption = Array.from(select.options).find(option => option.value);
+  if (firstDateOption && !select.value) {
+    try {
+      const remaining = await getWeekendCapacityForDate(firstDateOption.value);
+      if (remaining === 0 && !storeClosed) {
+        const banner = document.getElementById("orderStatus");
+        if (banner) {
+          banner.className = "status-banner closed";
+          banner.textContent = "We aren’t accepting any more orders for this weekend. Please choose another weekend.";
+        }
+      }
+    } catch (error) {
+      console.error("Could not check the earliest weekend capacity:", error);
+    }
+  }
+}
+
+
+async function getWeekendCapacityForDate(preferredDate) {
+  const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js");
+  const { getApps, getApp, initializeApp } = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+  const firebaseApp = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+  const functions = getFunctions(firebaseApp, "us-west1");
+  const getCapacity = httpsCallable(functions, "getWeekendCapacity");
+  const result = await getCapacity({ preferredDate });
+  return Math.max(0, Number(result.data?.remaining ?? MAX_WEEKEND_LOAVES));
 }
 
 
@@ -462,17 +491,16 @@ function renderCapacityMessage() {
   if (storeClosed) return;
   const banner = document.getElementById("orderStatus");
   const select = document.getElementById("pickupDate");
+  const submitButton = document.getElementById("submitOrder");
   if (!banner || !select || !select.value) return;
   const remaining = weekendCapacity.remaining;
   if (remaining === 0) {
     banner.className = "status-banner closed";
-    banner.textContent = "This weekend is sold out. Please choose another weekend.";
-    const wrapper = document.getElementById("orderFormWrap");
-    if (wrapper) wrapper.style.display = "none";
+    banner.textContent = "We aren’t accepting any more orders for this weekend. Please choose another weekend.";
+    if (submitButton) submitButton.disabled = true;
     return;
   }
-  const wrapper = document.getElementById("orderFormWrap");
-  if (wrapper) wrapper.style.display = "";
+  if (submitButton) submitButton.disabled = false;
   banner.className = "status-banner open";
   banner.textContent = remaining <= 2
     ? "Now accepting orders. Only " + remaining + " " + (remaining === 1 ? "loaf" : "loaves") + " remaining."
