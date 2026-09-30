@@ -1066,6 +1066,17 @@ function wireSubmit(form) {
           ]
         );
 
+      const preferredTime =
+        getFormValue(
+          formData,
+          [
+            "Preferred Time",
+            "Pickup Time",
+            "pickupTime",
+            "Time"
+          ]
+        );
+
       const deliveryAddress =
         fulfillment ===
         "Delivery"
@@ -1110,6 +1121,7 @@ function wireSubmit(form) {
           fulfillment,
           deliveryAddress,
           preferredDate,
+          preferredTime,
           notes,
           items,
           deliveryFee: fulfillment === "Delivery" ? DELIVERY_FEE : 0,
@@ -1119,7 +1131,7 @@ function wireSubmit(form) {
         if (typeof result.data?.remaining === "number") weekendCapacity.remaining = result.data.remaining;
 
         showFormMessage(
-          `Thanks! Your order ${savedOrderNumber} has been received.\n\nDate: ${preferredDate}\nItems: ${itemsSummary}\nTotal: ${total.toFixed(2)}\n\nWe'll contact you to confirm pickup or delivery details.`,
+          `Thanks! Your order ${savedOrderNumber} has been received.\n\nDate: ${preferredDate}\nTime: ${preferredTime}\nItems: ${itemsSummary}\nTotal: ${total.toFixed(2)}\n\nWe'll contact you to confirm pickup or delivery details.`,
           "success"
         );
 
