@@ -170,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
    ========================================================================== */
 
 const ORDER_SETTINGS = {
-  acceptingOrders: true,
+  acceptingOrders: false,
   limitedCapacityNote: true
 };
 
