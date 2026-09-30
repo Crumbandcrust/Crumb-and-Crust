@@ -103,6 +103,7 @@ exports.getWeekendCapacity = onCall({ region: "us-west1" }, async (request) => {
 exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
   const data = request.data || {};
   const preferredDate = String(data.preferredDate || "");
+  const preferredTime = String(data.preferredTime || "");
   const key = weekendKey(preferredDate);
   if (!key) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
   validatePreferredDate(preferredDate);
@@ -133,6 +134,7 @@ exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
       fulfillment: String(data.fulfillment || "Pickup"),
       deliveryAddress: String(data.deliveryAddress || ""),
       preferredDate,
+      preferredTime,
       notes: String(data.notes || ""),
       items: normalized,
       itemsSummary: normalized.map(item => item.quantity + "× " + item.name).join(", "),
@@ -216,6 +218,7 @@ exports.sendNewOrderEmail = onDocumentCreated(
         <p>
           <strong>Fulfillment:</strong> ${escapeHtml(order.fulfillment)}<br>
           <strong>Preferred date:</strong> ${escapeHtml(order.preferredDate)}<br>
+          <strong>Preferred time:</strong> ${escapeHtml(order.preferredTime)}<br>
           <strong>Delivery fee:</strong> ${formatMoney(order.deliveryFee)}<br>
           <strong>Total:</strong> ${formatMoney(order.total)}
         </p>
@@ -249,6 +252,7 @@ ${Array.isArray(order.items)
 
 Fulfillment: ${order.fulfillment || ""}
 Preferred date: ${order.preferredDate || ""}
+Preferred time: ${order.preferredTime || ""}
 Delivery fee: ${formatMoney(order.deliveryFee)}
 Total: ${formatMoney(order.total)}
 
