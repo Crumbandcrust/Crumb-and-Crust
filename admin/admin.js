@@ -263,6 +263,7 @@ function startAdminDashboard() {
         order.fulfillmentDate ||
         order.deliveryDate ||
         order.pickupDate ||
+        order.preferredDate ||
         order.orderDate ||
         order.date ||
         ""
@@ -276,6 +277,7 @@ function startAdminDashboard() {
         order.fulfillmentTime ||
         order.deliveryTime ||
         order.pickupTime ||
+        order.preferredTime ||
         order.time ||
         ""
       );
