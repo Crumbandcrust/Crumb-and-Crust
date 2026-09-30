@@ -87,8 +87,15 @@ function validateItems(items) {
     price: Number(item.price) || 0,
     subtotal: Number(item.subtotal) || 0
   })).filter(item => item.quantity > 0);
+
   const count = normalized.reduce((sum, item) => sum + item.quantity, 0);
-  if (!count || count > 4) throw new HttpsError("invalid-argument", "Orders are limited to 4 items.");
+  const sourdoughCount = normalized.filter(item => /sourdough/i.test(item.name)).reduce((sum, item) => sum + item.quantity, 0);
+  const breadCount = normalized.filter(item => !/sourdough/i.test(item.name)).reduce((sum, item) => sum + item.quantity, 0);
+
+  if (!count || count > 6) throw new HttpsError("invalid-argument", "Orders are limited to 6 items.");
+  if (sourdoughCount > 2) throw new HttpsError("invalid-argument", "You can order up to 2 sourdough loaves per order.");
+  if (breadCount > 4) throw new HttpsError("invalid-argument", "You can order up to 4 bread items per order.");
+
   return { normalized, count };
 }
 
