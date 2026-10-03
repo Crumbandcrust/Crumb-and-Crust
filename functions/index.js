@@ -58,16 +58,43 @@ function pacificNowParts() {
 }
 
 function validatePreferredDate(preferredDate) {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(preferredDate)) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(preferredDate)) {
+    throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
+  }
+
   const [year, month, day] = preferredDate.split("-").map(Number);
   const target = new Date(year, month - 1, day);
-  const [todayYear, todayMonth, todayDay] = pacificTodayKey().split("-").map(Number);
-  const today = new Date(todayYear, todayMonth - 1, todayDay);
-  const dayOfWeek = target.getDay();
-  if (dayOfWeek !== 0 && dayOfWeek !== 6) throw new HttpsError("invalid-argument", "Pickup and delivery are available Saturday and Sunday only.");
-  const nowPseudoUtc = Date.UTC(now.year, now.month - 1, now.day, now.hour, now.minute, now.second);\n  const targetPseudoUtc = Date.UTC(year, month - 1, day, 0, 0, 0);\n  const diffHours = (targetPseudoUtc - nowPseudoUtc) / 3600000;
-  if (diffHours < MIN_NOTICE_HOURS) throw new HttpsError("failed-precondition", "That weekend is too soon to order. Orders require at least 72 hours' notice.");
-  if (diffHours > MAX_ADVANCE_DAYS * 24) throw new HttpsError("failed-precondition", "Orders can be scheduled up to 21 days in advance.");
+  const now = pacificNowParts();
+  const today = new Date(now.year, now.month - 1, now.day);
+
+  if (target.getDay() !== 0 && target.getDay() !== 6) {
+    throw new HttpsError("invalid-argument", "Pickup and delivery are available Saturday and Sunday only.");
+  }
+
+  const nowPseudoUtc = Date.UTC(
+    now.year,
+    now.month - 1,
+    now.day,
+    now.hour,
+    now.minute,
+    now.second
+  );
+  const targetPseudoUtc = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const diffHours = (targetPseudoUtc - nowPseudoUtc) / 3600000;
+
+  if (diffHours < MIN_NOTICE_HOURS) {
+    throw new HttpsError(
+      "failed-precondition",
+      "That weekend is too soon to order. Orders require at least 72 hours' notice."
+    );
+  }
+
+  if (diffHours > MAX_ADVANCE_DAYS * 24) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Orders can be scheduled up to 21 days in advance."
+    );
+  }
 }
 
 function weekendKey(preferredDate) {
