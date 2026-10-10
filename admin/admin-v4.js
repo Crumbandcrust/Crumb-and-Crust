@@ -268,12 +268,13 @@ function startAdminDashboard() {
 
 
     function getRequestedDate(order) {
+      // These are the exact field names written by the current placeOrder function.
       return (
+        order.preferredDate ||
         order.requestedDate ||
         order.fulfillmentDate ||
         order.deliveryDate ||
         order.pickupDate ||
-        order.preferredDate ||
         order.orderDate ||
         order.date ||
         ""
@@ -282,12 +283,13 @@ function startAdminDashboard() {
 
 
     function getRequestedTime(order) {
+      // Prefer the exact field name written by the current placeOrder function.
       return (
+        order.preferredTime ||
         order.requestedTime ||
         order.fulfillmentTime ||
         order.deliveryTime ||
         order.pickupTime ||
-        order.preferredTime ||
         order.time ||
         ""
       );
