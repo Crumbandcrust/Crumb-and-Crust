@@ -71,6 +71,11 @@ function validatePreferredDate(preferredDate) {
     throw new HttpsError("invalid-argument", "Pickup and delivery are available Saturday and Sunday only.");
   }
 
+  // Temporary schedule: accept orders for Nov 7–8, 2026 only.
+  if (preferredDate !== "2026-11-07" && preferredDate !== "2026-11-08") {
+    throw new HttpsError("failed-precondition", "We are not baking on Halloween weekend. Orders are currently available for November 7–8, 2026 only.");
+  }
+
   const nowPseudoUtc = Date.UTC(
     now.year,
     now.month - 1,
