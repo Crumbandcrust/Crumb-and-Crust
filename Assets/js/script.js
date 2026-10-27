@@ -170,9 +170,12 @@ document.addEventListener("DOMContentLoaded", () => {
    ========================================================================== */
 
 const ORDER_SETTINGS = {
-  acceptingOrders: false,
+  acceptingOrders: true,
   limitedCapacityNote: true
 };
+
+// Temporary schedule: Halloween weekend is unavailable. Only Nov 7–8, 2026 is open.
+const ALLOWED_ORDER_DATES = new Set(["2026-11-07", "2026-11-08"]);
 
 const MAX_ITEMS_PER_ORDER = 6;
 const MAX_SOURDOUGH_PER_ORDER = 2;
@@ -404,7 +407,7 @@ function renderStatusBanner(
   }
 
   let message =
-    "Now accepting orders for pickup and delivery this weekend.";
+    "Now accepting orders for pickup and delivery on November 7–8 only. Halloween weekend is unavailable.";
 
   if (
     ORDER_SETTINGS.limitedCapacityNote
@@ -584,7 +587,7 @@ function populatePickupDates() {
   latestDate.setDate(latestDate.getDate() + 21);
   while (cursor <= latestDate) {
     const dayOfWeek = cursor.getDay();
-    if ((dayOfWeek === 6 || dayOfWeek === 0) && isOrderDateEligible(cursor)) availableDates.push(new Date(cursor));
+    if ((dayOfWeek === 6 || dayOfWeek === 0) && isOrderDateEligible(cursor) && ALLOWED_ORDER_DATES.has(formatDateInput(cursor))) availableDates.push(new Date(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   select.innerHTML = '<option value="" disabled selected>Choose a Saturday or Sunday</option>';
