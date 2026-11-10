@@ -44,6 +44,7 @@ const state = {
   products: [],
   coupons: [],
   inventory: { breadFlourGrams: 0, apFlourGrams: 0 },
+  closedWeekends: {},
 
   vacation: {
     enabled: false,
