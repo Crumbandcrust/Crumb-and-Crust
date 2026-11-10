@@ -283,16 +283,27 @@ function startAdminDashboard() {
 
 
     function getRequestedTime(order) {
-      // Prefer the exact field name written by the current placeOrder function.
-      return (
-        order.preferredTime ||
-        order.requestedTime ||
-        order.fulfillmentTime ||
-        order.deliveryTime ||
-        order.pickupTime ||
-        order.time ||
-        ""
+      // Current orders use preferredTime. Keep legacy aliases for older records.
+      const candidates = [
+        order.preferredTime,
+        order.requestedTime,
+        order.fulfillmentTime,
+        order.deliveryTime,
+        order.pickupTime,
+        order.preferredPickupTime,
+        order.preferredDeliveryTime,
+        order.timeSlot,
+        order.time,
+        order.pickup?.time,
+        order.delivery?.time,
+        order.fulfillmentDetails?.time
+      ];
+      const value = candidates.find(candidate =>
+        candidate !== undefined && candidate !== null && String(candidate).trim() !== ""
       );
+      return typeof value === "object" && value !== null
+        ? (value.label || value.value || value.time || "")
+        : (value || "");
     }
 
 
@@ -607,8 +618,9 @@ function startAdminDashboard() {
               <strong>${escapeHtml(date)}</strong>
             </div>
 
-            <div class="order-time-value">
-              ${escapeHtml(time)}
+            <div class="order-time-value" aria-label="Pickup or delivery time">
+              <span class="order-section-label">TIME</span>
+              <strong>${escapeHtml(time)}</strong>
             </div>
           </div>
 
@@ -2626,10 +2638,28 @@ function installOrderStyles() {
     }
 
     .order-time-value {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
       font-weight: 800;
       font-size: 1.3rem;
       color: #8c4d23;
       white-space: nowrap;
+      min-width: 105px;
+    }
+
+    .order-time-value .order-section-label {
+      margin: 0;
+      color: #8b817a;
+      font-size: 0.7rem;
+    }
+
+    .order-time-value strong {
+      display: block;
+      margin: 0;
+      color: #8c4d23;
+      font-size: 1.3rem;
     }
 
     .order-section-label {
