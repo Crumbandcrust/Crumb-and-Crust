@@ -140,6 +140,7 @@ function startAdminDashboard() {
         orders: "Orders",
         orderHistory: "Order History",
         vacation: "Vacation Mode",
+        availability: "Weekend Availability",
         products: "Products",
         coupons: "Coupons",
         analytics: "Analytics",
@@ -799,6 +800,7 @@ function startAdminDashboard() {
               <div class="nav-group">
                 <p class="nav-group-label">Store</p>
                 ${createNavButton("vacation", "Vacation Mode", "◷")}
+                ${createNavButton("availability", "Weekend Availability", "▣")}
                 ${createNavButton("settings", "Settings", "⚙")}
               </div>
             </nav>
@@ -918,6 +920,10 @@ function startAdminDashboard() {
 
         case "vacation":
           renderVacation(container);
+          break;
+
+        case "availability":
+          renderWeekendAvailability(container);
           break;
 
         case "products":
@@ -1406,6 +1412,148 @@ function startAdminDashboard() {
             }
           }
         );
+    }
+
+
+    /*
+    ==========================================================
+    WEEKEND AVAILABILITY
+    ==========================================================
+    */
+
+    function renderWeekendAvailability(container) {
+      const closures = Object.entries(state.closedWeekends || {})
+        .filter(([, settings]) => settings && (settings.pickup || settings.delivery))
+        .sort(([a], [b]) => a.localeCompare(b));
+
+      container.innerHTML = `
+        <div class="panel narrow-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Store availability</p>
+              <h2>Weekend availability</h2>
+              <p>Choose a weekend and turn off pickup, delivery, or both.</p>
+            </div>
+          </div>
+
+          <form class="admin-form" id="weekendClosureForm">
+            <label>
+              Weekend date
+              <input name="weekendDate" type="date" required>
+              <small>Choose either Saturday or Sunday. The setting applies to the entire weekend.</small>
+            </label>
+
+            <label class="toggle-row">
+              <span>
+                <strong>Pickup unavailable</strong>
+                <small>Customers cannot choose pickup for this weekend.</small>
+              </span>
+              <input name="pickup" type="checkbox">
+            </label>
+
+            <label class="toggle-row">
+              <span>
+                <strong>Delivery unavailable</strong>
+                <small>Customers cannot choose delivery for this weekend.</small>
+              </span>
+              <input name="delivery" type="checkbox">
+            </label>
+
+            <button class="primary-button" type="submit">Save weekend availability</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Upcoming changes</p>
+              <h2>Scheduled weekend closures</h2>
+            </div>
+          </div>
+
+          ${closures.length
+              ? closures.map(([key, settings]) => {
+                  const [year, month, day] = key.split("-").map(Number);
+                  const date = new Date(year, month - 1, day);
+                  const label = date.toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric"
+                  });
+                  const blocked = [
+                    settings.pickup ? "Pickup" : "",
+                    settings.delivery ? "Delivery" : ""
+                  ].filter(Boolean).join(" and ");
+                  return `
+                    <div class="order-card-footer" style="padding:14px 0;border-bottom:1px solid var(--border-color,#e8e2da);">
+                      <div>
+                        <strong>${escapeHtml(label)}</strong>
+                        <p class="order-muted" style="margin:4px 0 0;">${escapeHtml(blocked)} unavailable</p>
+                      </div>
+                      <button class="danger-button small-button" type="button" data-remove-weekend="${escapeHtml(key)}">Remove</button>
+                    </div>
+                  `;
+                }).join("")
+              : '<p class="order-muted">No weekend closures scheduled.</p>'
+          }
+        </div>
+      `;
+
+      document.getElementById("weekendClosureForm")?.addEventListener("submit", async event => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const rawDate = String(formData.get("weekendDate") || "");
+        const date = new Date(rawDate + "T00:00:00");
+        if (!rawDate || Number.isNaN(date.getTime()) || (date.getDay() !== 0 && date.getDay() !== 6)) {
+          showToast("Choose a Saturday or Sunday.", "error");
+          return;
+        }
+
+        const pickup = formData.get("pickup") === "on";
+        const delivery = formData.get("delivery") === "on";
+        if (!pickup && !delivery) {
+          showToast("Select pickup, delivery, or both.", "error");
+          return;
+        }
+
+        if (date.getDay() === 0) date.setDate(date.getDate() - 1);
+        const key = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0")
+        ].join("-");
+        const nextClosures = {
+          ...(state.closedWeekends || {}),
+          [key]: { pickup, delivery }
+        };
+
+        try {
+          await setDoc(doc(db, "settings", "store"), {
+            closedWeekends: nextClosures,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          showToast("Weekend availability saved.");
+        } catch (error) {
+          reportError("Could not save weekend availability.", error);
+        }
+      });
+
+      container.querySelectorAll("[data-remove-weekend]").forEach(button => {
+        button.addEventListener("click", async () => {
+          const key = button.dataset.removeWeekend;
+          const nextClosures = { ...(state.closedWeekends || {}) };
+          delete nextClosures[key];
+          try {
+            await setDoc(doc(db, "settings", "store"), {
+              closedWeekends: nextClosures,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+            showToast("Weekend closure removed.");
+          } catch (error) {
+            reportError("Could not remove the weekend closure.", error);
+          }
+        });
+      });
     }
 
 
@@ -2458,6 +2606,7 @@ function startAdminDashboard() {
               ...state.inventory,
               ...(data.inventory || {})
             };
+            state.closedWeekends = data.closedWeekends || {};
           }
 
           renderApp();
