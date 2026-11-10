@@ -547,7 +547,16 @@ function getPacificDateTimeParts(date = new Date()) {
   return { year: values.year, month: values.month, day: values.day, hour: values.hour || 0, minute: values.minute || 0, second: values.second || 0 };
 }
 
-function getPacificDateParts(date = new Date()) {\n  const parts = getPacificDateTimeParts(date);\n  return { year: parts.year, month: parts.month, day: parts.day };\n}\n\nfunction dateOnlyFromParts(parts) {
+function getPacificDateParts(date = new Date()) {
+  const parts = getPacificDateTimeParts(date);
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day
+  };
+}
+
+function dateOnlyFromParts(parts) {
   return new Date(parts.year, parts.month - 1, parts.day);
 }
 
