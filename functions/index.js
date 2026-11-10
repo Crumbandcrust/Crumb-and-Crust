@@ -127,13 +127,8 @@ exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
   if (!key) throw new HttpsError("invalid-argument", "Choose a valid Saturday or Sunday.");
   validatePreferredDate(preferredDate);
   const fulfillment = String(data.fulfillment || "Pickup");
-  const storeSettings = await db.collection("settings").doc("store").get();
-  const weekendClosure = storeSettings.data()?.closedWeekends?.[key];
+  const settingsRef = db.collection("settings").doc("store");
   const blockedFulfillment = /deliver/i.test(fulfillment) ? "delivery" : "pickup";
-  if (weekendClosure?.[blockedFulfillment] === true) {
-    const label = blockedFulfillment === "delivery" ? "Delivery" : "Pickup";
-    throw new HttpsError("failed-precondition", label + " is unavailable for that weekend. Please choose another weekend or fulfillment option.");
-  }
   const { normalized, count } = validateItems(data.items);
   const capacityRef = db.collection("weeklyCapacity").doc(key);
   const orderRef = db.collection("orders").doc();
@@ -141,7 +136,15 @@ exports.placeOrder = onCall({ region: "us-west1" }, async (request) => {
 
   let remainingAfter = MAX_WEEKEND_LOAVES;
   await db.runTransaction(async transaction => {
-    const capacitySnap = await transaction.get(capacityRef);
+    const [capacitySnap, settingsSnap] = await Promise.all([
+      transaction.get(capacityRef),
+      transaction.get(settingsRef)
+    ]);
+    const weekendClosure = settingsSnap.data()?.closedWeekends?.[key];
+    if (weekendClosure?.[blockedFulfillment] === true) {
+      const label = blockedFulfillment === "delivery" ? "Delivery" : "Pickup";
+      throw new HttpsError("failed-precondition", label + " is unavailable for that weekend. Please choose another weekend or fulfillment option.");
+    }
     const reserved = Number(capacitySnap.data()?.reservedLoaves || 0);
     if (reserved + count > MAX_WEEKEND_LOAVES) {
       throw new HttpsError("resource-exhausted", "Only " + Math.max(0, MAX_WEEKEND_LOAVES - reserved) + " loaves remain for this weekend.");
