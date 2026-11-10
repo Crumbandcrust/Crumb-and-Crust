@@ -183,6 +183,7 @@ let weekendCapacity = { key: "", remaining: MAX_WEEKEND_LOAVES };
 let capacityUnsubscribe = null;
 let updateCapacityRefresh = null;
 let storeClosed = false;
+let closedWeekends = {};
 
 /* ==========================================================================
    Firebase configuration
@@ -309,6 +310,8 @@ async function listenForVacationMode() {
         const data =
           snapshot.data();
 
+        closedWeekends = data.closedWeekends || {};
+        populatePickupDates();
         renderStatusBanner(
           data.vacation || null
         );
@@ -578,22 +581,32 @@ function renderOrderingWindowWarning() {
 function populatePickupDates() {
   const select = document.getElementById("pickupDate");
   if (!select) return;
+  const previousValue = select.value;
+  const selectedFulfillment = document.querySelector('input[name="Fulfillment"]:checked')?.value || "Pickup";
+  const fulfillmentKey = selectedFulfillment === "Delivery" ? "delivery" : "pickup";
   const availableDates = [];
   const cursor = dateOnlyFromParts(getPacificDateParts());
   const latestDate = new Date(cursor);
   latestDate.setDate(latestDate.getDate() + 21);
   while (cursor <= latestDate) {
     const dayOfWeek = cursor.getDay();
-    if ((dayOfWeek === 6 || dayOfWeek === 0) && isOrderDateEligible(cursor)) availableDates.push(new Date(cursor));
+    if ((dayOfWeek === 6 || dayOfWeek === 0) && isOrderDateEligible(cursor)) {
+      const dateKey = formatDateInput(cursor);
+      const weekend = closedWeekends[getWeekendKey(dateKey)];
+      if (!weekend?.[fulfillmentKey]) availableDates.push(new Date(cursor));
+    }
     cursor.setDate(cursor.getDate() + 1);
   }
-  select.innerHTML = '<option value="" disabled selected>Choose a Saturday or Sunday</option>';
+  select.innerHTML = `<option value="" disabled selected>${availableDates.length ? "Choose a Saturday or Sunday" : `No ${selectedFulfillment.toLowerCase()} weekends available`}</option>`;
   availableDates.forEach(date => {
     const option = document.createElement("option");
     option.value = formatDateInput(date);
     option.textContent = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     select.appendChild(option);
   });
+  if (previousValue && Array.from(select.options).some(option => option.value === previousValue)) {
+    select.value = previousValue;
+  }
   renderOrderingWindowWarning();
 }
 
@@ -632,6 +645,7 @@ function updateDeliveryFieldsVisibility() {
         deliverySelected;
     });
 
+  populatePickupDates();
   updateOrderTotal();
 }
 
