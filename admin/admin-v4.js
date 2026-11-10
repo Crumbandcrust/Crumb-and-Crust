@@ -2312,8 +2312,8 @@ function startAdminDashboard() {
         '<article class="dashboard-card"><p class="card-label">Orders today</p><strong>'+orders.length+'</strong><span>Pickup and delivery</span></article>'+
         '<article class="dashboard-card"><p class="card-label">Sourdough</p><strong>'+sourdough+'</strong><span>Loaves to make</span></article>'+
         '<article class="dashboard-card"><p class="card-label">Focaccia</p><strong>'+focaccia+'</strong><span>Recipes to make</span></article>'+
-        '<article class="dashboard-card"><p class="card-label">Flour needed</p><strong>'+flour.toLocaleString()+' g</strong><span>'+stock.toLocaleString()+' g currently in inventory</span></article></div>'+\
-        '<div class="panel"><div class="panel-header"><div><p class="eyebrow">Production</p><h2>Today\'s orders</h2></div></div>'+ (orders.length?'<div class="modern-orders-grid">'+orders.map(renderOrderCard).join('')+'</div>':createEmptyState("Nothing scheduled today","Orders for today will appear here."))+'</div>';
+        '<article class="dashboard-card"><p class="card-label">Flour needed</p><strong>'+flour.toLocaleString()+' g</strong><span>'+stock.toLocaleString()+' g currently in inventory</span></article></div>'+
+'<div class="panel"><div class="panel-header"><div><p class="eyebrow">Production</p><h2>Today\'s orders</h2></div></div>'+ (orders.length?'<div class="modern-orders-grid">'+orders.map(renderOrderCard).join('')+'</div>':createEmptyState("Nothing scheduled today","Orders for today will appear here."))+'</div>';
       document.querySelectorAll("[data-order-status]").forEach(select=>select.addEventListener("change",handleOrderStatusChange));
     }
 
@@ -2361,11 +2361,11 @@ function startAdminDashboard() {
         '<article class="dashboard-card"><p class="card-label">Open-order need</p><strong>'+needed.toLocaleString()+' g</strong><span>500 g sourdough · 575 g focaccia</span></article>'+
         '<article class="dashboard-card"><p class="card-label">Projected remaining</p><strong>'+Math.max(0,projected).toLocaleString()+' g</strong><span>'+(projected<0?'⚠️ More flour needed':'Enough for current orders')+'</span></article></div>'+
         '<div class="panel narrow-panel"><div class="panel-header"><div><p class="eyebrow">Inventory</p><h2>Flour inventory</h2></div></div><form class="admin-form" id="inventoryForm">'+
-        '<label>Bread flour (grams)<input name="breadFlour" type="number" min="0" step="1" required value="'+bread+'"></label>'+\
-        '<label>AP flour (grams)<input name="apFlour" type="number" min="0" step="1" required value="'+ap+'"></label>'+\
-        '<button class="primary-button" type="submit">Save inventory</button></form></div>'+\
-        '<div class="panel"><div class="panel-header"><div><p class="eyebrow">Shopping list</p><h2>What you need to buy</h2></div></div>'+\
-        (projected<0?'<p><strong>Flour:</strong> '+Math.abs(projected).toLocaleString()+' g more needed for current open orders.</p>':'<p>Nothing extra needed for the current open orders.</p>')+'</div>';
+        '<label>Bread flour (grams)<input name="breadFlour" type="number" min="0" step="1" required value="'+bread+'"></label>'+
+'<label>AP flour (grams)<input name="apFlour" type="number" min="0" step="1" required value="'+ap+'"></label>'+
+'<button class="primary-button" type="submit">Save inventory</button></form></div>'+
+'<div class="panel"><div class="panel-header"><div><p class="eyebrow">Shopping list</p><h2>What you need to buy</h2></div></div>'+
+(projected<0?'<p><strong>Flour:</strong> '+Math.abs(projected).toLocaleString()+' g more needed for current open orders.</p>':'<p>Nothing extra needed for the current open orders.</p>')+'</div>';
       document.getElementById("inventoryForm")?.addEventListener("submit",async event=>{event.preventDefault();const formData=new FormData(event.currentTarget);try{await setDoc(doc(db,"settings","store"),{inventory:{breadFlourGrams:Math.max(0,Number(formData.get("breadFlour"))||0),apFlourGrams:Math.max(0,Number(formData.get("apFlour"))||0)},updatedAt:serverTimestamp()},{merge:true});showToast("Inventory saved.");}catch(error){reportError("Could not save inventory.",error);}});
     }
 
